@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Ayden Precision Coach V2 Beta</title>
+<style>
+:root{
+  --bg:#f8fafc;--card:#ffffff;--text:#0f172a;--muted:#64748b;--line:#dbe3ee;
+  --accent:#2563eb;--accent2:#dbeafe;--good:#166534;--goodbg:#dcfce7;
+  --warn:#92400e;--warnbg:#fef3c7;--bad:#991b1b;--badbg:#fee2e2;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.app{max-width:760px;margin:0 auto;padding:16px 14px 40px}
+header{padding:6px 2px 14px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px}
+.metric .label{font-size:12px;color:var(--muted)}
+.metric .value{font-size:21px;font-weight:700;margin-top:2px}
+.progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+.progress>div{height:100%;background:var(--accent);width:0}
+.badge{display:inline-block;border-radius:999px;padding:5px 9px;background:var(--accent2);color:#1d4ed8;font-size:12px;font-weight:700}
+h2{font-size:20px;margin:0 0 8px}
+h3{font-size:16px;margin:0 0 6px}
+p{line-height:1.45}
+.instruction{font-size:18px;font-weight:700;margin:8px 0}
+.target{font-size:46px;line-height:1;font-weight:800;text-align:center;margin:18px 0 6px}
+.shotcount{text-align:center;color:var(--muted);margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:14px;font-weight:600}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#fff;color:var(--text);font-size:17px}
+button{border:0;border-radius:13px;padding:13px 16px;font-weight:700}
+.primary{width:100%;background:var(--accent);color:#fff;font-size:17px}
+.secondary{background:#e2e8f0;color:#0f172a}
+.ghost{background:#fff;color:var(--accent);border:1px solid #bfdbfe}
+.button-row{display:flex;gap:8px;flex-wrap:wrap}
+.button-row button{flex:1}
+.setup-list{display:grid;gap:9px}
+.checkrow{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px}
+.checkrow input{width:auto;margin:3px 0 0}
+.small{font-size:13px;color:var(--muted)}
+.hidden{display:none!important}
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.analysis-item{border:1px solid var(--line);border-radius:12px;padding:11px}
+.analysis-item .k{font-size:12px;color:var(--muted)}
+.analysis-item .v{font-size:20px;font-weight:700;margin-top:2px}
+.status-good{background:var(--goodbg);color:var(--good)}
+.status-warn{background:var(--warnbg);color:var(--warn)}
+.status-bad{background:var(--badbg);color:var(--bad)}
+.history-row{padding:11px 0;border-bottom:1px solid var(--line)}
+.history-row:last-child{border-bottom:0}
+.weekbar{display:grid;grid-template-columns:90px 1fr 56px;gap:8px;align-items:center;margin:9px 0}
+.bar{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+nav{display:flex;gap:8px;margin-bottom:14px}
+nav button{flex:1;background:#e2e8f0}
+nav button.active{background:var(--accent);color:#fff}
+dialog{border:0;border-radius:18px;width:min(92vw,650px);padding:0}
+dialog::backdrop{background:rgba(15,23,42,.55)}
+.dialog-body{padding:16px}
+.fixed-value{margin-top:6px;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#f1f5f9;color:#334155;font-size:17px}
+.coach-banner{border-left:4px solid var(--accent);background:var(--accent2);border-radius:12px;padding:11px 12px;margin:10px 0;color:#1e3a8a;font-weight:600}
+.focus-card{border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:13px;margin-top:12px}
+.achievement{display:inline-block;margin:4px 4px 0 0;padding:6px 9px;border-radius:999px;background:var(--goodbg);color:var(--good);font-size:12px;font-weight:700}
+.beta-pill{display:inline-block;vertical-align:middle;margin-left:6px;padding:4px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:800}
+.beta-card{border:2px dashed #f59e0b;background:#fffbeb}
+@media(max-width:520px){
+  .metric-grid{grid-template-columns:1fr 1fr}
+  .grid2,.analysis-grid{grid-template-columns:1fr}
+  .target{font-size:42px}
+}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Precision Beta">
+
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Ayden Precision Coach V2 <span class="beta-pill">BETA</span></h1>
+  <div class="sub">Private test build. All data stays separate from Ayden’s live version.</div>
+</header>
+
+<nav>
+  <button id="practiceTab" class="active">Practice</button>
+  <button id="progressTab">Progress</button>
+  <button id="dataTab">Data</button>
+</nav>
+
+<section id="practiceView">
+  <div class="metric-grid">
+    <div class="metric"><div class="label">Today</div><div id="mShots" class="value">0</div></div>
+    <div class="metric"><div class="label">Avg carry error</div><div id="mError" class="value">—</div></div>
+    <div class="metric"><div class="label">Coach score</div><div id="mCoachScore" class="value">—</div></div>
+    <div class="metric"><div class="label">Practice streak</div><div id="mStreak" class="value">0</div></div>
+  </div>
+
+  <div class="card">
+    <div class="small" id="phaseLabel">Ready</div>
+    <div class="progress"><div id="overallBar"></div></div>
+  </div>
+
+  <div id="tierCard" class="card">
+    <div class="small">Current focus range</div>
+    <h2 id="tierLabel" style="margin:4px 0 6px">Tier 1 · 70–110 yards</h2>
+    <p id="tierSub" class="small">Every drill today is built around this range. Ayden should be under the pass standard here before it gets wider.</p>
+    <div id="tierReady" class="coach-banner hidden"></div>
+    <button id="expandTierBtn" class="ghost hidden" style="margin-top:10px">Expand the practice range</button>
+  </div>
+
+  <div id="resumeScreen" class="card hidden">
+    <span class="badge">Practice saved</span>
+    <h2 style="margin-top:10px">Continue unfinished practice?</h2>
+    <p id="resumeDescription"></p>
+    <div class="button-row">
+      <button id="resumePractice" class="primary">Continue Practice</button>
+      <button id="discardPractice" class="secondary">Start Over</button>
+    </div>
+  </div>
+
+  <div id="startScreen" class="card">
+    <h2>Start today’s practice</h2>
+    <div class="grid2">
+      <label>Date<input id="practiceDate" type="date"></label>
+      <label>Location
+        <select id="location">
+          <option>Home simulator</option>
+          <option>Golf course range</option>
+          <option>On-course practice</option>
+        </select>
+      </label>
+      <label>Ball
+        <div class="fixed-value">Titleist Pro V1</div>
+      </label>
+      <label>Conditions<input id="conditions" placeholder="Indoor, wind, turf, temperature"></label>
+      <label>Energy today
+        <select id="energy"><option value="5">Excellent</option><option value="4">Good</option><option value="3" selected>Normal</option><option value="2">Low</option><option value="1">Very low</option></select>
+      </label>
+      <label>Confidence today
+        <select id="confidence"><option value="5">Very confident</option><option value="4">Confident</option><option value="3" selected>Neutral</option><option value="2">Unsure</option><option value="1">Low</option></select>
+      </label>
+    </div>
+    <p class="small">The app will walk Ayden through every setup step and every shot. Only the active step appears.</p>
+    <div class="button-row">
+      <button id="startPractice" class="primary">Begin Practice</button>
+      <button id="openGcquadGuide1" class="ghost" type="button">GCQuad Numbers Guide</button>
+    </div>
+  </div>
+
+  <div id="coachScreen" class="hidden">
+    <div class="card">
+      <span id="drillBadge" class="badge">Drill 1</span>
+      <h2 id="drillTitle" style="margin-top:10px"></h2>
+      <p id="drillPurpose"></p>
+    </div>
+
+    <div id="setupCard" class="card hidden">
+      <h3 id="setupTitle">GCQuad setup</h3>
+      <p id="setupInstruction" class="instruction"></p>
+      <div id="setupControl"></div>
+      <button id="setupNext" class="primary">Done — Next Step</button>
+    </div>
+
+    <div id="shotCard" class="card hidden">
+      <div class="small" id="shotGroup"></div>
+      <div id="targetDisplay" class="target">90 yd</div>
+      <div id="shotCount" class="shotcount">Shot 1 of 4</div>
+      <p id="shotInstruction" class="instruction"></p>
+      <div id="gcquadFocus" class="coach-banner hidden"></div>
+      <div id="liveCoach" class="coach-banner hidden" aria-live="polite"></div>
+
+      <div class="grid2">
+        <label>Actual carry
+          <input id="carry" inputmode="decimal" type="number" step="0.1" placeholder="yards">
+        </label>
+        <label>Left / right finish
+          <input id="side" inputmode="decimal" type="number" step="0.1" placeholder="Left − / Right +">
+        </label>
+        <label>Proximity
+          <input id="proximity" inputmode="decimal" type="number" step="0.1" placeholder="feet">
+        </label>
+        <label>Strike
+          <select id="strike">
+            <option>Center</option><option>High</option><option>Low</option>
+            <option>Toe</option><option>Heel</option><option>Unknown</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="toggleDetails" class="ghost" style="margin:12px 0 0;width:100%">Add GCQuad details</button>
+      <div id="details" class="grid2 hidden" style="margin-top:10px">
+        <label>Ball speed (mph)<input id="ballSpeed" type="number" step="0.1"><div class="small">Distance · should repeat closely for the same target every time</div></label>
+        <label>Launch angle (°)<input id="launch" type="number" step="0.1"><div class="small">Trajectory · roughly 24–34° on a full wedge shot</div></label>
+        <label>Total spin (rpm)<input id="spin" type="number" step="1"><div class="small">Spin/stopping power · typically 7,000–10,000+ rpm</div></label>
+        <label>Side angle (°)<input id="azimuth" type="number" step="0.1"><div class="small">Start line · the actual direction the ball started, target 0°</div></label>
+        <label>Club path (°)<input id="path" type="number" step="0.1"><div class="small">Shot shape · near 0° for a straight stock shot</div></label>
+        <label>Face angle (°)<input id="face" type="number" step="0.1"><div class="small">Start line · biggest driver of direction, target within 1–2°</div></label>
+        <label>Attack angle (°)<input id="attack" type="number" step="0.1"><div class="small">Strike quality · slightly negative (−4° to −8°) for crisp contact</div></label>
+        <label>Dynamic loft (°)<input id="dynLoft" type="number" step="0.1"><div class="small">Trajectory/spin · should track close to the club's stated loft</div></label>
+      </div>
+      <button id="openGcquadGuide2" class="ghost" type="button" style="margin-top:10px">What do these numbers mean?</button>
+
+      <button id="saveShot" class="primary" style="margin-top:14px">Save Shot</button>
+      <div id="shotMessage" class="small" style="margin-top:8px"></div>
+    </div>
+
+    <div id="analysisCard" class="card hidden">
+      <span id="analysisStatus" class="badge">Drill complete</span>
+      <h2 id="analysisTitle" style="margin-top:10px"></h2>
+      <div id="analysisGrid" class="analysis-grid"></div>
+      <div id="analysisComparison" class="coach-banner" style="margin-top:10px"></div>
+      <p id="analysisMessage"></p>
+      <button id="nextDrill" class="primary">Start Next Drill</button>
+    </div>
+
+    <div id="finishCard" class="card hidden">
+      <h2>Practice complete</h2>
+      <div id="finalSummary" class="analysis-grid"></div>
+      <div id="tomorrowFocus" class="focus-card"></div>
+      <p id="finalMessage"></p>
+      <button id="finishPractice" class="primary">Save Today’s Practice</button>
+    </div>
+  </div>
+</section>
+
+<section id="progressView" class="hidden">
+  <div class="card">
+    <h2>Six-month progress</h2>
+    <div class="metric-grid">
+      <div class="metric"><div class="label">First 2 weeks</div><div id="baselineMetric" class="value">—</div></div>
+      <div class="metric"><div class="label">Last 2 weeks</div><div id="recentMetric" class="value">—</div></div>
+      <div class="metric"><div class="label">Improvement</div><div id="improveMetric" class="value">—</div></div>
+    </div>
+    <p id="progressMessage" class="small"></p>
+  </div>
+
+  <div class="card">
+    <h2>Week-by-week carry control</h2>
+    <div id="weeklyChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Progress by distance</h2>
+    <p class="small">Lower carry error is better. This identifies exactly where improvement is happening.</p>
+    <div id="distanceProgress"></div>
+  </div>
+
+  <div class="card">
+    <h2>Personal bests</h2>
+    <div id="personalBests" class="analysis-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Practice history</h2>
+    <div id="historyList" class="small">No completed practices yet.</div>
+  </div>
+</section>
+
+<section id="dataView" class="hidden">
+  <div class="card beta-card">
+    <h2>Beta test tools</h2>
+    <p>These tools create fake practices only inside this beta file. They never affect Ayden’s live app.</p>
+    <div class="button-row">
+      <button id="loadFakeData" class="primary">Load 8 Weeks of Fake Data</button>
+      <button id="clearBetaData" class="secondary">Clear Beta Data</button>
+    </div>
+    <div id="betaMessage" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Keep the data safe</h2>
+    <p>This app stores practice history on this device. Export a backup regularly, especially before changing phones or clearing browser data.</p>
+    <div class="button-row">
+      <button id="exportJson" class="primary">Export Backup</button>
+      <button id="exportCsv" class="secondary">Export CSV</button>
+    </div>
+    <label style="margin-top:14px">Import backup
+      <input id="importFile" type="file" accept=".json,application/json">
+    </label>
+    <div id="dataMessage" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Storage status</h2>
+    <p id="storageStatus"></p>
+    <button id="eraseData" class="secondary">Erase All Practice Data</button>
+  </div>
+</section>
+</div>
+
+<dialog id="confirmDialog">
+  <div class="dialog-body">
+    <h2>Erase all data?</h2>
+    <p>This permanently removes every saved practice from this device.</p>
+    <div class="button-row">
+      <button id="cancelErase" class="secondary">Cancel</button>
+      <button id="confirmErase" class="primary">Erase Everything</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="gcquadDialog">
+  <div class="dialog-body">
+    <h2>GCQuad numbers guide</h2>
+    <p class="small">These are general elite-wedge reference ranges, not hard rules. Ayden's own repeated numbers over months of data matter more than any single target here — this is just so he knows what each number is and roughly where it should live.</p>
+
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Face angle · controls start line</div>
+      <p style="margin:4px 0 0">Where the clubface points at impact relative to the target line. This is the single biggest factor in which direction the ball starts — more important than path. <strong>Target: within 1–2° of 0.</strong></p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Side angle (azimuth) · confirms start line</div>
+      <p style="margin:4px 0 0">The actual direction the ball left the face. This is the real result — face angle is the cause, side angle is the effect. <strong>Target: as close to 0° as possible.</strong></p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Club path · shot shape</div>
+      <p style="margin:4px 0 0">The direction the clubhead is moving through impact. Path relative to face angle is what curves the ball left or right after it starts. <strong>Near 0° for a stock, straight shot.</strong></p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Ball speed · drives distance</div>
+      <p style="margin:4px 0 0">How fast the ball leaves the face. There's no universal target number — the goal is that Ayden's ball speed repeats tightly every time he hits the same planned distance. Big swings in ball speed for the same shot usually mean inconsistent strike.</p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Attack angle · strike quality</div>
+      <p style="margin:4px 0 0">Whether the club is moving down or up into the ball. A slightly descending strike compresses the ball and produces clean, spinny contact. <strong>Typical wedge range: −4° to −8°.</strong></p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Dynamic loft · trajectory and spin source</div>
+      <p style="margin:4px 0 0">The actual loft delivered at impact, which can differ from the club's stamped loft depending on hands and shaft lean. <strong>Should track close to the club's listed loft</strong> — a big gap usually means strike or setup is off.</p>
+    </div>
+    <div class="analysis-item" style="margin-bottom:8px">
+      <div class="k">Launch angle · trajectory</div>
+      <p style="margin:4px 0 0">The vertical angle the ball leaves the face. Combined with spin, this sets how the ball flies and how it lands. <strong>Typical full wedge range: 24–34°</strong> — lower for a knockdown, higher for a high, soft shot.</p>
+    </div>
+    <div class="analysis-item">
+      <div class="k">Total spin · stopping power</div>
+      <p style="margin:4px 0 0">Backspin rate. Higher spin means a steeper landing angle and more stopping power on the green, but too much can rob distance. <strong>Typical full wedge range: 7,000–10,000+ rpm.</strong></p>
+    </div>
+
+    <h3 style="margin-top:14px">Which numbers matter for which skill</h3>
+    <p style="margin:4px 0 0"><strong>Start line:</strong> face angle first, side angle confirms it, path shapes the curve.</p>
+    <p style="margin:6px 0 0"><strong>Distance control:</strong> ball speed, attack angle, dynamic loft.</p>
+    <p style="margin:6px 0 0"><strong>Trajectory:</strong> launch angle, dynamic loft, spin.</p>
+    <p style="margin:6px 0 0"><strong>Spin / stopping power:</strong> total spin, attack angle, dynamic loft.</p>
+
+    <button id="closeGcquad" class="primary" style="margin-top:16px">Close</button>
+  </div>
+</dialog>
+
+<script>
+const STORAGE_KEY='ayden_precision_coach_v2_beta';
+const ACTIVE_KEY='ayden_precision_active_v2_beta';
+let storageAvailable=true;
+function safeSet(key,value){
+  try{
+    localStorage.setItem(key,value);
+    storageAvailable=true;
+    return true;
+  }catch(err){
+    storageAvailable=false;
+    return false;
+  }
+}
+function safeRemove(key){
+  try{
+    localStorage.removeItem(key);
+    return true;
+  }catch(err){
+    storageAvailable=false;
+    return false;
+  }
+}
+function safeGet(key,fallback=null){
+  try{
+    const value=localStorage.getItem(key);
+    storageAvailable=true;
+    return value===null?fallback:value;
+  }catch(err){
+    storageAvailable=false;
+    return fallback;
+  }
+}
+
+const TIER_KEY='ayden_precision_tier_v2_beta';
+const TIERS=[
+  {level:1,label:'Tier 1 · 70–110 yards',min:70,max:110,distances:[70,80,90,100,110]},
+  {level:2,label:'Tier 2 · 60–120 yards',min:60,max:120,distances:[60,70,80,90,100,110,120]},
+  {level:3,label:'Tier 3 · 50–130 yards (full range)',min:50,max:130,distances:[50,60,70,80,90,100,110,120,130]}
+];
+function loadTier(){
+  const v=Number(safeGet(TIER_KEY,'1'));
+  return TIERS.find(t=>t.level===v)||TIERS[0];
+}
+function saveTierLevel(level){safeSet(TIER_KEY,String(level))}
+let currentTier=loadTier();
+
+function buildDrillTemplates(tier){
+  return [
+    {
+      id:1,title:'Setup and Calibration',
+      purpose:'Establish today’s normal carry, start line and strike pattern before training begins.',
+      setup:[
+        'Place the GCQuad level and square to the intended target line.',
+        'Use clean, dry competition golf balls.',
+        'Select the club Ayden uses for his stock 90-yard shot.',
+        'Confirm carry, side result and proximity are visible on the GCQuad display.'
+      ],
+      groups:[
+        {target:80,count:4,label:'80-yard calibration',instruction:'Hit a normal stock shot. Do not chase the previous result.'},
+        {target:100,count:4,label:'100-yard calibration',instruction:'Use the stock 100-yard shot and complete the full routine.'}
+      ],
+      pass:3.5,
+      gcquadFocusText:'GCQuad focus: <strong>Face angle</strong> and <strong>Side angle</strong> tell you today’s start-line pattern. <strong>Ball speed</strong> tells you if the strike is consistent.'
+    },
+    {
+      id:2,title:tier.min+'–'+tier.max+' Yard Distance Ladder',
+      purpose:'Build exact stock carry control across every distance in the current range: '+tier.min+'–'+tier.max+' yards.',
+      setup:[
+        'Confirm the GCQuad target line has not moved.',
+        'Keep the same ball model and clean the clubface.',
+        'Choose the planned club and stock feel for '+tier.min+' yards before starting.',
+        'Record only the shot shown on the screen. No extra balls between attempts.'
+      ],
+      groups:tier.distances.map(d=>({target:d,count:3,label:d+'-yard stock set',instruction:'Hit the stock '+d+'-yard shot. Accept the result and record it.'})),
+      pass:3,
+      gcquadFocusText:'GCQuad focus: <strong>Ball speed</strong>, <strong>attack angle</strong> and <strong>dynamic loft</strong> — these three drive distance. Watch that ball speed repeats for each target.'
+    },
+    {
+      id:3,title:'Random Tournament Test',
+      purpose:'Transfer distance control into one-ball, changing-target practice across '+tier.min+'–'+tier.max+' yards.',
+      setup:[
+        'Set one clear target line and keep it for the entire test.',
+        'Use the same ball and normal pre-shot routine used in competition.',
+        'No do-overs and no extra rehearsal balls after seeing a result.',
+        'The app will choose a new distance for every shot.'
+      ],
+      groups:[{random:true,min:tier.min,max:tier.max,count:15,label:'Random one-ball test',instruction:'Treat this as a tournament approach. Commit before you swing.'}],
+      pass:3,
+      gcquadFocusText:'GCQuad focus: everything at once — <strong>face angle</strong> and <strong>side angle</strong> for start line, <strong>ball speed</strong> for distance. This is the transfer test.'
+    },
+    {
+      id:4,title:'Flight-Window Control',
+      purpose:'Control low, stock and high trajectories without losing carry precision.',
+      setup:[
+        'Confirm the 90-yard target line.',
+        'Use the club and trajectory choices approved by Sean.',
+        'Do not create a new swing. Use the established feels for each window.'
+      ],
+      groups:[
+        {target:90,count:3,label:'Low flight',trajectory:'Low',instruction:'Hit the approved low 90-yard flight.'},
+        {target:90,count:3,label:'Stock flight',trajectory:'Stock',instruction:'Hit the normal stock 90-yard flight.'},
+        {target:90,count:3,label:'High flight',trajectory:'High',instruction:'Hit the approved high 90-yard flight.'}
+      ],
+      pass:4,
+      gcquadFocusText:'GCQuad focus: <strong>Launch angle</strong>, <strong>dynamic loft</strong> and <strong>total spin</strong> — these define the trajectory window, not carry distance.'
+    },
+    {
+      id:5,title:'Pressure Finish',
+      purpose:'Finish practice with five committed shots under a clear pass-or-fail standard.',
+      setup:[
+        'Take a brief reset before starting.',
+        'Use the full tournament routine on every ball.',
+        'No technical thoughts after stepping into the shot.',
+        'The app will choose five random distances.'
+      ],
+      groups:[{random:true,min:tier.min,max:tier.max,count:5,label:'Pressure shots',instruction:'One committed shot. Imagine this approach decides the tournament.'}],
+      pass:5,
+      gcquadFocusText:'GCQuad focus: <strong>Face angle</strong> and <strong>ball speed</strong> under pressure — watch whether numbers hold up when it counts.'
+    }
+  ];
+}
+let drillTemplates=buildDrillTemplates(currentTier);
+
+let state={
+  sessions:loadSessions(),
+  current:null,
+  drillIndex:0,
+  setupIndex:0,
+  groupIndex:0,
+  shotInGroup:0,
+  currentShots:[],
+  lastFeedback:''
+};
+
+function loadSessions(){
+  try{return JSON.parse(safeGet(STORAGE_KEY,'[]')||'[]')}catch{return []}
+}
+function saveSessions(){
+  safeSet(STORAGE_KEY,JSON.stringify(state.sessions));
+}
+function saveActive(){
+  if(!state.current){safeRemove(ACTIVE_KEY);return}
+  const active={
+    current:state.current,drillIndex:state.drillIndex,setupIndex:state.setupIndex,
+    groupIndex:state.groupIndex,shotInGroup:state.shotInGroup,currentShots:state.currentShots
+  };
+  safeSet(ACTIVE_KEY,JSON.stringify(active));
+}
+function loadActive(){
+  try{return JSON.parse(safeGet(ACTIVE_KEY,'null')||'null')}catch{return null}
+}
+function restoreActive(active){
+  state.current=active.current;
+  state.drillIndex=active.drillIndex||0;
+  state.setupIndex=active.setupIndex||0;
+  state.groupIndex=active.groupIndex||0;
+  state.shotInGroup=active.shotInGroup||0;
+  state.currentShots=active.currentShots||[];
+  el('startScreen').classList.add('hidden');
+  el('resumeScreen').classList.add('hidden');
+  el('coachScreen').classList.remove('hidden');
+  showDrillIntro();
+  if(state.setupIndex>=currentDrill().setup.length){
+    el('setupCard').classList.add('hidden');
+    el('shotCard').classList.remove('hidden');
+    showShot();
+  }
+}
+function el(id){return document.getElementById(id)}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+el('practiceDate').value=todayISO();
+
+function switchTab(name){
+  ['practice','progress','data'].forEach(n=>{
+    el(n+'View').classList.toggle('hidden',n!==name);
+    el(n+'Tab').classList.toggle('active',n===name);
+  });
+  if(name==='progress') renderProgress();
+  if(name==='data') renderStorage();
+}
+el('practiceTab').onclick=()=>switchTab('practice');
+el('progressTab').onclick=()=>switchTab('progress');
+el('dataTab').onclick=()=>switchTab('data');
+
+function beginPractice(){
+  state.current={
+    id:Date.now(),
+    date:el('practiceDate').value||todayISO(),
+    location:el('location').value,
+    ball:'Titleist Pro V1',
+    conditions:el('conditions').value,
+    energy:Number(el('energy').value),
+    confidence:Number(el('confidence').value),
+    startedAt:new Date().toISOString(),
+    tierLevel:currentTier.level,
+    drills:[]
+  };
+  state.drillIndex=0;state.setupIndex=0;state.groupIndex=0;state.shotInGroup=0;state.currentShots=[];
+  saveActive();
+  el('startScreen').classList.add('hidden');
+  el('coachScreen').classList.remove('hidden');
+  showDrillIntro();
+  if(!storageAvailable){
+    el('phaseLabel').textContent='Practice running · saving unavailable in this viewer';
+  }
+}
+el('startPractice').onclick=beginPractice;
+
+function currentDrill(){return drillTemplates[state.drillIndex]}
+function currentGroup(){return currentDrill().groups[state.groupIndex]}
+function targetForCurrentShot(){
+  const g=currentGroup();
+  if(g.random){
+    const span=g.max-g.min+1;
+    if(!g.generated) g.generated=Array.from({length:g.count},()=>g.min+Math.floor(Math.random()*span));
+    return g.generated[state.shotInGroup];
+  }
+  return g.target;
+}
+function totalPlanned(){return drillTemplates.reduce((s,d)=>s+d.groups.reduce((x,g)=>x+g.count,0),0)}
+function shotsDone(){
+  return state.current?state.current.drills.reduce((s,d)=>s+d.shots.length,0)+state.currentShots.length:0
+}
+function updateTop(){
+  const all=state.current?state.current.drills.flatMap(d=>d.shots).concat(state.currentShots):[];
+  el('mShots').textContent=all.length;
+  el('mError').textContent=all.length?(all.reduce((s,x)=>s+Math.abs(x.carry-x.target),0)/all.length).toFixed(1)+' yd':'—';
+  const score=all.length?coachScore(all):null;
+  el('mCoachScore').textContent=score===null?'—':score;
+  el('mStreak').textContent=calcStreak();
+  el('overallBar').style.width=(shotsDone()/totalPlanned()*100)+'%';
+  el('phaseLabel').textContent=state.current?`Drill ${state.drillIndex+1} of ${drillTemplates.length}`:'Ready';
+}
+function coachScore(shots){
+  if(!shots.length)return null;
+  const carry=shots.reduce((s,x)=>s+Math.abs(x.carry-x.target),0)/shots.length;
+  const carryScore=Math.max(0,100-carry*13);
+  const centered=shots.filter(x=>x.strike==='Center').length/shots.length*100;
+  const sideShots=shots.filter(x=>x.side!==null);
+  const side=sideShots.length?sideShots.reduce((s,x)=>s+Math.abs(x.side),0)/sideShots.length:3;
+  const sideScore=Math.max(0,100-side*8);
+  return Math.round(carryScore*.65+centered*.2+sideScore*.15);
+}
+function showDrillIntro(){
+  const d=currentDrill();
+  el('drillBadge').textContent='Drill '+d.id;
+  el('drillTitle').textContent=d.title;
+  el('drillPurpose').textContent=d.purpose;
+  el('setupCard').classList.remove('hidden');
+  el('shotCard').classList.add('hidden');
+  el('analysisCard').classList.add('hidden');
+  el('finishCard').classList.add('hidden');
+  showSetupStep();
+  updateTop();
+}
+function showSetupStep(){
+  const d=currentDrill();
+  el('setupTitle').textContent=`GCQuad setup · Step ${state.setupIndex+1} of ${d.setup.length}`;
+  el('setupInstruction').textContent=d.setup[state.setupIndex];
+  el('setupControl').innerHTML='';
+  el('setupNext').textContent=state.setupIndex===d.setup.length-1?'Setup Complete — Start Shots':'Done — Next Step';
+}
+el('setupNext').onclick=()=>{
+  const d=currentDrill();
+  if(state.setupIndex<d.setup.length-1){state.setupIndex++;saveActive();showSetupStep()}
+  else{state.setupIndex=d.setup.length;saveActive();el('setupCard').classList.add('hidden');el('shotCard').classList.remove('hidden');showShot()}
+};
+
+function showShot(){
+  const g=currentGroup();
+  const target=targetForCurrentShot();
+  el('shotGroup').textContent=g.label+(g.trajectory?' · '+g.trajectory:'');
+  el('targetDisplay').textContent=target+' yd';
+  el('shotCount').textContent=`Shot ${state.shotInGroup+1} of ${g.count}`;
+  el('shotInstruction').textContent=g.instruction;
+  const focusText=currentDrill().gcquadFocusText;
+  el('gcquadFocus').innerHTML=focusText||'';
+  el('gcquadFocus').classList.toggle('hidden',!focusText);
+  ['carry','side','proximity','ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft'].forEach(id=>el(id).value='');
+  el('strike').value='Center';
+  el('shotMessage').textContent='';
+  if(state.lastFeedback){
+    el('liveCoach').textContent=state.lastFeedback;
+    el('liveCoach').classList.remove('hidden');
+    state.lastFeedback='';
+  }else el('liveCoach').classList.add('hidden');
+  el('carry').focus();
+}
+el('toggleDetails').onclick=()=>{
+  el('details').classList.toggle('hidden');
+  el('toggleDetails').textContent=el('details').classList.contains('hidden')?'Add GCQuad details':'Hide GCQuad details';
+};
+function num(id){
+  const v=el(id).value;
+  return v===''?null:Number(v)
+}
+el('saveShot').onclick=()=>{
+  const carry=num('carry');
+  if(carry===null){el('shotMessage').textContent='Enter actual carry before saving.';return}
+  const target=targetForCurrentShot();
+  const shotRecord={
+    target,carry,
+    side:num('side'),proximity:num('proximity'),strike:el('strike').value,
+    ballSpeed:num('ballSpeed'),launch:num('launch'),spin:num('spin'),azimuth:num('azimuth'),
+    path:num('path'),face:num('face'),attack:num('attack'),dynLoft:num('dynLoft'),
+    group:currentGroup().label,trajectory:currentGroup().trajectory||'Stock'
+  };
+  state.currentShots.push(shotRecord);
+  state.lastFeedback=shotFeedback(shotRecord);
+  saveActive();
+  advanceShot();
+};
+function shotFeedback(x){
+  const err=x.carry-x.target;
+  const abs=Math.abs(err);
+  if(abs<=1)return `Excellent distance control: ${abs.toFixed(1)} yard carry error.`;
+  if(abs<=2.5)return `Good shot: ${abs.toFixed(1)} yards from the carry target.`;
+  if(abs<=4)return `${err>0?'Long':'Short'} by ${abs.toFixed(1)} yards. Stay committed to the next target.`;
+  return `${err>0?'Long':'Short'} by ${abs.toFixed(1)} yards. Record it and reset—do not chase the miss.`;
+}
+function advanceShot(){
+  const g=currentGroup();
+  if(state.shotInGroup<g.count-1){state.shotInGroup++;saveActive();showShot()}
+  else if(state.groupIndex<currentDrill().groups.length-1){
+    state.groupIndex++;state.shotInGroup=0;saveActive();showShot()
+  }else{
+    completeDrill()
+  }
+  updateTop();
+}
+function completeDrill(){
+  const d=currentDrill();
+  const result={id:d.id,title:d.title,shots:[...state.currentShots]};
+  state.current.drills.push(result);
+  state.currentShots=[];
+  saveActive();
+  el('shotCard').classList.add('hidden');
+  el('analysisCard').classList.remove('hidden');
+  renderDrillAnalysis(result,d);
+}
+function avgAbs(shots,keyFn){return shots.reduce((s,x)=>s+Math.abs(keyFn(x)),0)/shots.length}
+function renderDrillAnalysis(result,d){
+  const shots=result.shots;
+  const avgCarry=avgAbs(shots,x=>x.carry-x.target);
+  const avgSide=shots.filter(x=>x.side!==null).length?avgAbs(shots.filter(x=>x.side!==null),x=>x.side):null;
+  const long=shots.filter(x=>x.carry>x.target).length;
+  const short=shots.filter(x=>x.carry<x.target).length;
+  const best=Math.min(...shots.map(x=>Math.abs(x.carry-x.target)));
+  const worst=Math.max(...shots.map(x=>Math.abs(x.carry-x.target)));
+  const centered=Math.round(shots.filter(x=>x.strike==='Center').length/shots.length*100);
+  const passed=avgCarry<=d.pass;
+  el('analysisStatus').textContent=passed?'Passed':'Needs Work';
+  el('analysisStatus').className='badge '+(passed?'status-good':avgCarry<=d.pass+1?'status-warn':'status-bad');
+  el('analysisTitle').textContent=`${d.title} analysis`;
+  el('analysisGrid').innerHTML=`
+    <div class="analysis-item"><div class="k">Average carry error</div><div class="v">${avgCarry.toFixed(1)} yd</div></div>
+    <div class="analysis-item"><div class="k">Average side error</div><div class="v">${avgSide===null?'—':avgSide.toFixed(1)+' yd'}</div></div>
+    <div class="analysis-item"><div class="k">Long / short</div><div class="v">${long} / ${short}</div></div>
+    <div class="analysis-item"><div class="k">Best / largest miss</div><div class="v">${best.toFixed(1)} / ${worst.toFixed(1)}</div></div>
+    <div class="analysis-item"><div class="k">Center strikes</div><div class="v">${centered}%</div></div>
+    <div class="analysis-item"><div class="k">Shots completed</div><div class="v">${shots.length}</div></div>`;
+  const bias=long>short+1?'long':short>long+1?'short':'balanced';
+  const prior=state.sessions.flatMap(s=>s.drills).filter(x=>x.id===d.id);
+  if(prior.length){
+    const priorAvg=prior.reduce((sum,r)=>sum+avgAbs(r.shots,x=>x.carry-x.target),0)/prior.length;
+    const change=priorAvg-avgCarry;
+    el('analysisComparison').textContent=change>0.1
+      ?`Progress: ${change.toFixed(1)} yards better than Ayden’s previous average in this drill.`
+      :change<-0.1
+      ?`Today was ${Math.abs(change).toFixed(1)} yards above his previous average. Keep the result and continue.`
+      :`Today matched his previous average in this drill.`;
+  }else{
+    el('analysisComparison').textContent='This is Ayden’s baseline for this drill. Future sessions will be compared with it.';
+  }
+  el('analysisMessage').textContent=passed
+    ?`Good work. Carry control passed this drill. The distance pattern was ${bias}.`
+    :`Carry control missed the drill standard. The main distance pattern was ${bias}. Record it, then move on without making a swing change.`;
+  el('nextDrill').textContent=state.drillIndex===drillTemplates.length-1?'See Final Practice Summary':'Start Drill '+(state.drillIndex+2);
+}
+el('nextDrill').onclick=()=>{
+  if(state.drillIndex<drillTemplates.length-1){
+    state.drillIndex++;state.setupIndex=0;state.groupIndex=0;state.shotInGroup=0;saveActive();showDrillIntro()
+  }else showFinal();
+};
+function showFinal(){
+  el('analysisCard').classList.add('hidden');
+  el('finishCard').classList.remove('hidden');
+  const shots=state.current.drills.flatMap(d=>d.shots);
+  const avg=avgAbs(shots,x=>x.carry-x.target);
+  const inside=shots.filter(x=>x.proximity!==null);
+  const inside15=inside.length?Math.round(inside.filter(x=>x.proximity<=15).length/inside.length*100):null;
+  const center=Math.round(shots.filter(x=>x.strike==='Center').length/shots.length*100);
+  el('finalSummary').innerHTML=`
+    <div class="analysis-item"><div class="k">Total shots</div><div class="v">${shots.length}</div></div>
+    <div class="analysis-item"><div class="k">Average carry error</div><div class="v">${avg.toFixed(1)} yd</div></div>
+    <div class="analysis-item"><div class="k">Inside 15 feet</div><div class="v">${inside15===null?'—':inside15+'%'}</div></div>
+    <div class="analysis-item"><div class="k">Center strikes</div><div class="v">${center}%</div></div>`;
+  const distanceGroups={};
+  shots.forEach(x=>{if(!distanceGroups[x.target])distanceGroups[x.target]=[];distanceGroups[x.target].push(Math.abs(x.carry-x.target))});
+  const weakest=Object.entries(distanceGroups).map(([d,v])=>[Number(d),v.reduce((a,b)=>a+b,0)/v.length]).sort((a,b)=>b[1]-a[1])[0];
+  const long=shots.filter(x=>x.carry>x.target).length, short=shots.filter(x=>x.carry<x.target).length;
+  const pattern=long>short+3?'long':short>long+3?'short':'balanced';
+  el('tomorrowFocus').innerHTML=`<strong>Recommended next focus</strong><br>
+    ${weakest?`Carry control from ${weakest[0]} yards was today’s largest opportunity (${weakest[1].toFixed(1)} yd average error). `:''}
+    The overall distance pattern was ${pattern}. Tomorrow’s app will preserve the full program, while highlighting this result in the review.`;
+  state.current.recommendedFocus=weakest?`${weakest[0]} yards · ${pattern} pattern`:`${pattern} pattern`;
+  el('finalMessage').textContent=avg<=2?'Elite-level session. Save it and keep building.':avg<=3?'Strong session. The next goal is getting randomized carry error under 2 yards.':'Good work completed. The progress page will show whether the weekly trend is improving.';
+}
+el('finishPractice').onclick=()=>{
+  state.current.completedAt=new Date().toISOString();
+  state.sessions.push(state.current);
+  saveSessions();
+  state.current=null;
+  safeRemove(ACTIVE_KEY);
+  el('coachScreen').classList.add('hidden');
+  el('startScreen').classList.remove('hidden');
+  updateTop();
+  refreshTierUI();
+  switchTab('progress');
+};
+
+function allSessionShots(s){return s.drills.flatMap(d=>d.shots)}
+function sessionAvg(s){
+  const shots=allSessionShots(s);return shots.length?avgAbs(shots,x=>x.carry-x.target):null
+}
+function weekKey(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  const day=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+  return d.toISOString().slice(0,10)
+}
+function renderProgress(){
+  const sessions=[...state.sessions].sort((a,b)=>a.date.localeCompare(b.date));
+  const recent6=sessions.filter(s=>(new Date()-new Date(s.date+'T12:00:00'))<=183*86400000);
+  if(!recent6.length){
+    el('baselineMetric').textContent='—';el('recentMetric').textContent='—';el('improveMetric').textContent='—';
+    el('progressMessage').textContent='Complete the first practice to establish Ayden’s baseline.';
+    el('weeklyChart').innerHTML='<div class="small">No weekly data yet.</div>';
+    el('distanceProgress').innerHTML='<div class="small">No distance data yet.</div>';
+    el('personalBests').innerHTML='<div class="small">Complete the first practice to establish personal bests.</div>';
+    el('historyList').textContent='No completed practices yet.';return
+  }
+  const first=recent6.slice(0,Math.min(4,recent6.length));
+  const last=recent6.slice(Math.max(0,recent6.length-4));
+  const base=first.reduce((s,x)=>s+sessionAvg(x),0)/first.length;
+  const rec=last.reduce((s,x)=>s+sessionAvg(x),0)/last.length;
+  const imp=base-rec;
+  el('baselineMetric').textContent=base.toFixed(1)+' yd';
+  el('recentMetric').textContent=rec.toFixed(1)+' yd';
+  el('improveMetric').textContent=(imp>=0?'-':'+' )+Math.abs(imp).toFixed(1)+' yd';
+  el('progressMessage').textContent=imp>0
+    ?`Ayden’s recent average carry error is ${imp.toFixed(1)} yards better than his starting baseline.`
+    :`The baseline is established. Keep collecting consistent sessions so the trend becomes meaningful.`;
+
+  const weeks={};
+  recent6.forEach(s=>{
+    const k=weekKey(s.date);
+    if(!weeks[k])weeks[k]=[];
+    weeks[k].push(sessionAvg(s));
+  });
+  const entries=Object.entries(weeks).sort((a,b)=>a[0].localeCompare(b[0]));
+  const max=Math.max(...entries.map(([,v])=>v.reduce((a,b)=>a+b,0)/v.length),5);
+  el('weeklyChart').innerHTML=entries.map(([k,v])=>{
+    const a=v.reduce((x,y)=>x+y,0)/v.length;
+    return `<div class="weekbar"><div class="small">${k}</div><div class="bar"><span style="width:${Math.max(6,a/max*100)}%"></span></div><div><strong>${a.toFixed(1)}</strong></div></div>`
+  }).join('');
+  const dist={};
+  recent6.forEach(s=>allSessionShots(s).forEach(x=>{
+    if(!dist[x.target])dist[x.target]=[];
+    dist[x.target].push(Math.abs(x.carry-x.target));
+  }));
+  const standard=[...new Set([...currentTier.distances,...Object.keys(dist).map(Number)])].sort((a,b)=>a-b);
+  el('distanceProgress').innerHTML=standard.map(d=>{
+    const vals=dist[d]||[];
+    if(!vals.length)return `<div class="weekbar"><div>${d} yd</div><div class="bar"><span style="width:0%"></span></div><div>—</div></div>`;
+    const a=vals.reduce((x,y)=>x+y,0)/vals.length;
+    const width=Math.max(6,Math.min(100,(1-a/7)*100));
+    return `<div class="weekbar"><div>${d} yd</div><div class="bar"><span style="width:${width}%"></span></div><div><strong>${a.toFixed(1)}</strong></div></div>`;
+  }).join('');
+
+  const avgs=recent6.map(sessionAvg).filter(x=>x!==null);
+  const bestSession=Math.min(...avgs);
+  const bestScore=Math.max(...recent6.map(s=>coachScore(allSessionShots(s))));
+  const totalShots=recent6.reduce((s,x)=>s+allSessionShots(x).length,0);
+  const achievements=[];
+  if(recent6.length>=1)achievements.push('Baseline established');
+  if(recent6.length>=5)achievements.push('Five practices');
+  if(totalShots>=500)achievements.push('500 precision shots');
+  if(bestSession<=3)achievements.push('Sub-3-yard session');
+  if(bestSession<=2)achievements.push('Elite carry session');
+  el('personalBests').innerHTML=`
+    <div class="analysis-item"><div class="k">Best session</div><div class="v">${bestSession.toFixed(1)} yd</div></div>
+    <div class="analysis-item"><div class="k">Best coach score</div><div class="v">${bestScore}</div></div>
+    <div class="analysis-item"><div class="k">Six-month shots</div><div class="v">${totalShots}</div></div>
+    <div class="analysis-item"><div class="k">Achievements</div><div>${achievements.map(a=>`<span class="achievement">${a}</span>`).join('')}</div></div>`;
+
+  el('historyList').innerHTML=[...recent6].reverse().map(s=>{
+    const a=sessionAvg(s);
+    return `<div class="history-row"><strong>${s.date}</strong> · ${s.location}<br>${allSessionShots(s).length} shots · ${a.toFixed(1)} yd average carry error</div>`
+  }).join('');
+}
+function calcStreak(){
+  const dates=[...new Set(state.sessions.map(s=>s.date))].sort().reverse();
+  if(!dates.length)return 0;
+  let streak=0;
+  let cursor=new Date();
+  cursor.setHours(12,0,0,0);
+  const today=todayISO();
+  if(dates[0]!==today){
+    cursor.setDate(cursor.getDate()-1);
+    if(dates[0]!==cursor.toISOString().slice(0,10))return 0;
+  }
+  for(const d of dates){
+    const expected=cursor.toISOString().slice(0,10);
+    if(d!==expected)break;
+    streak++;cursor.setDate(cursor.getDate()-1);
+  }
+  return streak;
+}
+function renderStorage(){
+  const bytes=new Blob([JSON.stringify(state.sessions)]).size;
+  if(!storageAvailable){
+    el('storageStatus').textContent='This file viewer is blocking device storage. Practice will still run, but data may not persist after the file closes. Open the file in Safari or add it to the Home Screen for reliable saving.';
+    return;
+  }
+  el('storageStatus').textContent=`${state.sessions.length} beta practices saved separately on this device · approximately ${(bytes/1024).toFixed(1)} KB used.`;
+}
+function download(name,type,text){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)
+}
+el('exportJson').onclick=()=>download('ayden-precision-beta-backup.json','application/json',JSON.stringify({version:2,sessions:state.sessions,active:loadActive()},null,2));
+el('exportCsv').onclick=()=>{
+  const headers=['sessionDate','tier','location','drill','target','carry','absoluteCarryError','side','proximity','strike','ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft'];
+  const rows=[headers.join(',')];
+  state.sessions.forEach(s=>s.drills.forEach(d=>d.shots.forEach(x=>{
+    const vals=[s.date,s.tierLevel||1,s.location,d.title,x.target,x.carry,Math.abs(x.carry-x.target),x.side,x.proximity,x.strike,x.ballSpeed,x.launch,x.spin,x.azimuth,x.path,x.face,x.attack,x.dynLoft];
+    rows.push(vals.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(','))
+  })));
+  download('ayden-precision-beta-shots.csv','text/csv',rows.join('\n'))
+};
+el('importFile').onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const p=JSON.parse(r.result);
+      if(!Array.isArray(p.sessions))throw new Error();
+      state.sessions=p.sessions;saveSessions();
+      if(p.active)safeSet(ACTIVE_KEY,JSON.stringify(p.active));
+      el('dataMessage').textContent='Backup imported successfully.';renderStorage()
+    }catch{el('dataMessage').textContent='That backup file could not be imported.'}
+  };
+  r.readAsText(file)
+};
+el('eraseData').onclick=()=>el('confirmDialog').showModal();
+el('cancelErase').onclick=()=>el('confirmDialog').close();
+el('confirmErase').onclick=()=>{state.sessions=[];state.current=null;saveSessions();safeRemove(ACTIVE_KEY);el('confirmDialog').close();renderStorage();renderProgress();updateTop()};
+
+
+function seededRandom(seed){
+  let s=seed>>>0;
+  return function(){
+    s=(s*1664525+1013904223)>>>0;
+    return s/4294967296;
+  };
+}
+function buildFakeSession(dateStr,index){
+  const rand=seededRandom(1000+index);
+  const improvement=index*0.13;
+  const session={
+    id:900000+index,
+    date:dateStr,
+    location:index%2===0?'Home simulator':'Golf course range',
+    ball:'Titleist Pro V1',
+    conditions:index%2===0?'Indoor':'Light wind',
+    energy:3+(index%3===0?1:0),
+    confidence:3+(index>3?1:0),
+    startedAt:new Date(dateStr+'T15:00:00').toISOString(),
+    completedAt:new Date(dateStr+'T16:10:00').toISOString(),
+    drills:[],
+    recommendedFocus:'90 yards · balanced pattern'
+  };
+  drillTemplates.forEach(d=>{
+    const shots=[];
+    d.groups.forEach(g=>{
+      const count=g.count;
+      for(let i=0;i<count;i++){
+        const target=g.random ? g.min+Math.floor(rand()*(g.max-g.min+1)) : g.target;
+        const baseErr=Math.max(1.4,4.6-improvement);
+        const signed=(rand()-.5)*2*baseErr;
+        shots.push({
+          target,
+          carry:Number((target+signed).toFixed(1)),
+          side:Number(((rand()-.5)*5).toFixed(1)),
+          proximity:Number((8+rand()*18).toFixed(1)),
+          strike:rand()>.18?'Center':(rand()>.5?'Toe':'Low'),
+          ballSpeed:null,launch:null,spin:null,azimuth:null,
+          path:null,face:null,attack:null,dynLoft:null,
+          group:g.label,
+          trajectory:g.trajectory||'Stock'
+        });
+      }
+    });
+    session.drills.push({id:d.id,title:d.title,shots});
+  });
+  return session;
+}
+function loadFakeBetaData(){
+  const sessions=[];
+  const today=new Date();
+  today.setHours(12,0,0,0);
+  for(let i=0;i<8;i++){
+    const d=new Date(today);
+    d.setDate(d.getDate()-(7*(7-i)));
+    sessions.push(buildFakeSession(d.toISOString().slice(0,10),i));
+  }
+  state.sessions=sessions;
+  saveSessions();
+  safeRemove(ACTIVE_KEY);
+  state.current=null;
+  el('betaMessage').textContent='Loaded eight weeks of fake practices. Open Progress to test the trend screens.';
+  renderStorage();
+  renderProgress();
+  updateTop();
+}
+el('loadFakeData').onclick=loadFakeBetaData;
+el('clearBetaData').onclick=()=>{
+  state.sessions=[];
+  state.current=null;
+  saveSessions();
+  safeRemove(ACTIVE_KEY);
+  el('betaMessage').textContent='All beta test data was cleared.';
+  renderStorage();
+  renderProgress();
+  updateTop();
+};
+
+const active=loadActive();
+if(active&&active.current){
+  el('resumeScreen').classList.remove('hidden');
+  el('startScreen').classList.add('hidden');
+  const d=drillTemplates[active.drillIndex||0];
+  const completed=(active.current.drills||[]).reduce((s,x)=>s+x.shots.length,0)+(active.currentShots||[]).length;
+  el('resumeDescription').textContent=`${active.current.date} · Drill ${d.id}: ${d.title} · ${completed} shots completed`;
+}
+function tierReadiness(){
+  const sessions=state.sessions.filter(s=>(s.tierLevel||1)===currentTier.level);
+  const ladderResults=sessions.flatMap(s=>s.drills.filter(d=>d.id===2));
+  if(ladderResults.length<3)return false;
+  const recent=ladderResults.slice(-3);
+  return recent.every(r=>avgAbs(r.shots,x=>x.carry-x.target)<=2.5);
+}
+function refreshTierUI(){
+  el('tierLabel').textContent=currentTier.label;
+  const nextTier=TIERS.find(t=>t.level===currentTier.level+1);
+  if(nextTier&&tierReadiness()){
+    el('tierReady').classList.remove('hidden');
+    el('tierReady').textContent=`Ayden’s last 3 Distance Ladder sessions in this range averaged under 2.5 yards of carry error. He’s ready to expand to ${nextTier.label}.`;
+    el('expandTierBtn').classList.remove('hidden');
+    el('expandTierBtn').textContent='Expand to '+nextTier.label;
+  }else{
+    el('tierReady').classList.add('hidden');
+    el('expandTierBtn').classList.add('hidden');
+  }
+}
+el('expandTierBtn').onclick=()=>{
+  const nextTier=TIERS.find(t=>t.level===currentTier.level+1);
+  if(!nextTier)return;
+  currentTier=nextTier;
+  saveTierLevel(currentTier.level);
+  drillTemplates=buildDrillTemplates(currentTier);
+  refreshTierUI();
+};
+function openGcquadGuide(){el('gcquadDialog').showModal()}
+el('openGcquadGuide1').onclick=openGcquadGuide;
+el('openGcquadGuide2').onclick=openGcquadGuide;
+el('closeGcquad').onclick=()=>el('gcquadDialog').close();
+
+el('resumePractice').onclick=()=>restoreActive(loadActive());
+el('discardPractice').onclick=()=>{
+  safeRemove(ACTIVE_KEY);
+  el('resumeScreen').classList.add('hidden');
+  el('startScreen').classList.remove('hidden');
+};
+
+updateTop();
+refreshTierUI();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
