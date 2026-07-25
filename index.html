@@ -66,6 +66,11 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
 .dialog-body{padding:16px}
 .fixed-value{margin-top:6px;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#f1f5f9;color:#334155;font-size:17px}
 .coach-banner{border-left:4px solid var(--accent);background:var(--accent2);border-radius:12px;padding:11px 12px;margin:10px 0;color:#1e3a8a;font-weight:600}
+.insight-item{border-radius:12px;padding:10px 12px;margin-top:8px;border-left:4px solid var(--line);font-size:14px;line-height:1.4}
+.insight-good{border-left-color:var(--good);background:var(--goodbg)}
+.insight-warn{border-left-color:var(--warn);background:var(--warnbg)}
+.insight-bad{border-left-color:var(--bad);background:var(--badbg)}
+.insight-item strong{display:block;font-size:13px;margin-bottom:3px}
 .focus-card{border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:13px;margin-top:12px}
 .achievement{display:inline-block;margin:4px 4px 0 0;padding:6px 9px;border-radius:999px;background:var(--goodbg);color:var(--good);font-size:12px;font-weight:700}
 .beta-pill{display:inline-block;vertical-align:middle;margin-left:6px;padding:4px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:800}
@@ -209,6 +214,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <div id="analysisGrid" class="analysis-grid"></div>
       <div id="analysisComparison" class="coach-banner" style="margin-top:10px"></div>
       <p id="analysisMessage"></p>
+      <div id="coachingInsights"></div>
       <button id="nextDrill" class="primary">Start Next Drill</button>
     </div>
 
@@ -380,6 +386,20 @@ function safeGet(key,fallback=null){
   }
 }
 
+const GCQUAD_FIELDS={
+  ballSpeed:{label:'Ball speed (mph)',step:0.1,hint:'Distance · should repeat closely for the same target every time',signed:false},
+  launch:{label:'Launch angle (°)',step:0.1,hint:'Trajectory · roughly 24–34° on a full wedge shot',signed:false},
+  spin:{label:'Total spin (rpm)',step:1,hint:'Spin/stopping power · typically 7,000–10,000+ rpm',signed:false},
+  azimuth:{label:'Side angle (°)',step:0.1,hint:'Start line · the actual direction the ball started, target 0°',signed:true},
+  path:{label:'Club path (°)',step:0.1,hint:'Shot shape · near 0° for a straight stock shot',signed:true},
+  face:{label:'Face angle (°)',step:0.1,hint:'Start line · biggest driver of direction, target within 1–2°',signed:true},
+  attack:{label:'Attack angle (°)',step:0.1,hint:'Strike quality · slightly negative (−4° to −8°) for crisp contact',signed:true},
+  dynLoft:{label:'Dynamic loft (°)',step:0.1,hint:"Trajectory/spin · should track close to the club's stated loft",signed:false}
+};
+function gcquadSetupLine(fieldIds){
+  const names=fieldIds.map(id=>GCQUAD_FIELDS[id].label.replace(/\s*\([^)]*\)/,''));
+  return 'For this drill you\u2019ll need: '+names.join(', ')+'. Put these numbers up on the GCQuad screen so they\u2019re easy to read straight into the app.';
+}
 const TIER_KEY='ayden_precision_tier_v2_beta';
 const TIERS=[
   {level:1,label:'Tier 1 · 70–110 yards',min:70,max:110,distances:[70,80,90,100,110]},
@@ -399,8 +419,7 @@ function buildDrillTemplates(tier){
       id:1,title:'Setup and Calibration',
       purpose:'Establish today’s normal carry, start line and strike pattern before training begins.',
       setup:[
-        'Select the club Ayden uses for his stock 90-yard shot.',
-        'Confirm carry, side result and proximity are visible on the GCQuad display.'
+        gcquadSetupLine(['ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft'])
       ],
       groups:[
         {target:80,count:4,label:'80-yard calibration',instruction:'Hit a normal stock shot. Do not chase the previous result.'},
@@ -414,6 +433,7 @@ function buildDrillTemplates(tier){
       id:2,title:tier.min+'–'+tier.max+' Yard Distance Ladder',
       purpose:'Build exact stock carry control across every distance in the current range: '+tier.min+'–'+tier.max+' yards.',
       setup:[
+        gcquadSetupLine(['ballSpeed','attack','dynLoft','spin']),
         'Confirm the GCQuad target line has not moved.',
         'Record only the shot shown on the screen. No extra balls between attempts.'
       ],
@@ -440,6 +460,7 @@ function buildDrillTemplates(tier){
       id:4,title:'Flight-Window Control',
       purpose:'Control low, stock and high trajectories without losing carry precision.',
       setup:[
+        gcquadSetupLine(['launch','dynLoft','attack','spin']),
         'Confirm the 90-yard target line.'
       ],
       groups:[
@@ -612,16 +633,6 @@ el('setupNext').onclick=()=>{
   else{state.setupIndex=d.setup.length;saveActive();el('setupCard').classList.add('hidden');el('shotCard').classList.remove('hidden');showShot()}
 };
 
-const GCQUAD_FIELDS={
-  ballSpeed:{label:'Ball speed (mph)',step:0.1,hint:'Distance · should repeat closely for the same target every time',signed:false},
-  launch:{label:'Launch angle (°)',step:0.1,hint:'Trajectory · roughly 24–34° on a full wedge shot',signed:false},
-  spin:{label:'Total spin (rpm)',step:1,hint:'Spin/stopping power · typically 7,000–10,000+ rpm',signed:false},
-  azimuth:{label:'Side angle (°)',step:0.1,hint:'Start line · the actual direction the ball started, target 0°',signed:true},
-  path:{label:'Club path (°)',step:0.1,hint:'Shot shape · near 0° for a straight stock shot',signed:true},
-  face:{label:'Face angle (°)',step:0.1,hint:'Start line · biggest driver of direction, target within 1–2°',signed:true},
-  attack:{label:'Attack angle (°)',step:0.1,hint:'Strike quality · slightly negative (−4° to −8°) for crisp contact',signed:true},
-  dynLoft:{label:'Dynamic loft (°)',step:0.1,hint:"Trajectory/spin · should track close to the club's stated loft",signed:false}
-};
 function renderGcquadFields(){
   const req=currentDrill().gcquadRequired||[];
   if(!req.length){
@@ -663,7 +674,8 @@ function showShot(){
     el('liveCoach').classList.remove('hidden');
     state.lastFeedback='';
   }else el('liveCoach').classList.add('hidden');
-  el('carry').focus();
+  // No auto-focus here on purpose — keeps the keypad from popping up
+  // until Ayden actually taps a field.
 }
 el('shotCard').addEventListener('click',e=>{
   const btn=e.target.closest('.signToggle');
@@ -730,6 +742,102 @@ function completeDrill(){
   renderDrillAnalysis(result,d);
 }
 function avgAbs(shots,keyFn){return shots.reduce((s,x)=>s+Math.abs(keyFn(x)),0)/shots.length}
+function mean(arr){return arr.reduce((a,b)=>a+b,0)/arr.length}
+function stdDev(arr){
+  if(arr.length<2)return 0;
+  const m=mean(arr);
+  return Math.sqrt(arr.reduce((s,x)=>s+(x-m)*(x-m),0)/(arr.length-1));
+}
+function vals(shots,key){return shots.map(x=>x[key]).filter(v=>v!==null&&v!==undefined)}
+function generateCoachingInsights(d,shots){
+  const insights=[];
+  const req=d.gcquadRequired||[];
+  if(!req.length)return insights;
+
+  if(req.includes('ballSpeed')){
+    const bs=vals(shots,'ballSpeed');
+    if(bs.length>=3){
+      const sd=stdDev(bs);
+      if(sd>2){
+        insights.push({level:'bad',title:'Strike consistency',text:`Ball speed varied by about ${sd.toFixed(1)} mph shot to shot. A swing that size usually means contact quality, not swing length, is driving today's distance misses.`});
+      }else if(sd>1){
+        insights.push({level:'warn',title:'Strike consistency',text:`Ball speed varied by about ${sd.toFixed(1)} mph — a little inconsistent, worth watching, but not the main issue today.`});
+      }else{
+        insights.push({level:'good',title:'Strike consistency',text:`Ball speed held tight (±${sd.toFixed(1)} mph) — strike quality was solid today.`});
+      }
+    }
+  }
+
+  if(req.includes('attack')){
+    const at=vals(shots,'attack');
+    if(at.length){
+      const m=mean(at);
+      if(m>-3){
+        insights.push({level:'warn',title:'Attack angle',text:`Averaged ${m.toFixed(1)}° — flatter than the −4° to −8° target for a wedge. A shallow attack angle can cause thin or inconsistent contact.`});
+      }else if(m<-9){
+        insights.push({level:'warn',title:'Attack angle',text:`Averaged ${m.toFixed(1)}° — steeper than ideal. This can cause heavy strikes and rob distance.`});
+      }else{
+        insights.push({level:'good',title:'Attack angle',text:`Averaged ${m.toFixed(1)}° — right in the descending strike range for a wedge.`});
+      }
+    }
+  }
+
+  if(req.includes('dynLoft')){
+    const dl=vals(shots,'dynLoft');
+    if(dl.length>=3){
+      const sd=stdDev(dl);
+      if(sd>2.5){
+        insights.push({level:'bad',title:'Delivery consistency',text:`Dynamic loft swung by about ${sd.toFixed(1)}° shot to shot — hands and shaft lean at impact are inconsistent, which affects both trajectory and distance.`});
+      }
+    }
+  }
+
+  if(req.includes('face')){
+    const fc=vals(shots,'face');
+    if(fc.length){
+      const m=mean(fc);
+      if(Math.abs(m)>1.5){
+        insights.push({level:'bad',title:'Start line',text:`Face angle averaged ${m>0?'+':''}${m.toFixed(1)}° — pointing ${m>0?'right':'left'} of target. This is very likely the direct cause of the start-line miss, more than swing path.`});
+      }else{
+        insights.push({level:'good',title:'Start line',text:`Face angle averaged ${m>0?'+':''}${m.toFixed(1)}° — close to square, start line is under control.`});
+      }
+    }
+  }
+
+  if(req.includes('spin')){
+    const sp=vals(shots,'spin');
+    if(sp.length>=3){
+      const sd=stdDev(sp);
+      if(sd>1200){
+        insights.push({level:'warn',title:'Spin consistency',text:`Spin varied by about ${Math.round(sd)} rpm shot to shot — inconsistent spin changes how far the ball carries and how it lands, even at similar ball speed.`});
+      }
+    }
+  }
+
+  if(d.id===4){
+    const low=shots.filter(x=>x.trajectory==='Low');
+    const stock=shots.filter(x=>x.trajectory==='Stock');
+    const high=shots.filter(x=>x.trajectory==='High');
+    if(low.length&&stock.length&&high.length&&vals(low,'launch').length&&vals(stock,'launch').length&&vals(high,'launch').length){
+      const lowLaunch=mean(vals(low,'launch'));
+      const stockLaunch=mean(vals(stock,'launch'));
+      const highLaunch=mean(vals(high,'launch'));
+      const lowGap=stockLaunch-lowLaunch;
+      const highGap=highLaunch-stockLaunch;
+      if(lowGap<3){
+        insights.push({level:'warn',title:'Low window separation',text:`Low flight launch angle was only ${lowGap.toFixed(1)}° below Stock — not enough separation. Check dynamic loft and attack angle on the low shots; they likely need to come down further.`});
+      }
+      if(highGap<3){
+        insights.push({level:'warn',title:'High window separation',text:`High flight launch angle was only ${highGap.toFixed(1)}° above Stock — not enough separation from the stock shot.`});
+      }
+      if(lowGap>=3&&highGap>=3){
+        insights.push({level:'good',title:'Trajectory windows',text:`Low and High windows both separated cleanly from Stock (${lowGap.toFixed(1)}° lower, ${highGap.toFixed(1)}° higher) — trajectory control is working.`});
+      }
+    }
+  }
+
+  return insights;
+}
 function renderDrillAnalysis(result,d){
   const shots=result.shots;
   const avgCarry=avgAbs(shots,x=>x.carry-x.target);
@@ -766,6 +874,10 @@ function renderDrillAnalysis(result,d){
   el('analysisMessage').textContent=passed
     ?`Good work. Carry control passed this drill. The distance pattern was ${bias}.`
     :`Carry control missed the drill standard. The main distance pattern was ${bias}. Record it, then move on without making a swing change.`;
+  const insights=generateCoachingInsights(d,shots);
+  el('coachingInsights').innerHTML=insights.length
+    ?'<h3 style="margin:14px 0 4px">What the numbers show</h3>'+insights.map(i=>`<div class="insight-item insight-${i.level}"><strong>${i.title}</strong>${i.text}</div>`).join('')
+    :'';
   el('nextDrill').textContent=state.drillIndex===drillTemplates.length-1?'See Final Practice Summary':'Start Drill '+(state.drillIndex+2);
 }
 el('nextDrill').onclick=()=>{
