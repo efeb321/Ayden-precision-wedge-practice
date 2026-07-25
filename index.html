@@ -358,11 +358,11 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <p class="small">These are general elite-wedge reference ranges, not hard rules. Ayden's own repeated numbers over months of data matter more than any single target here — this is just so he knows what each number is and roughly where it should live.</p>
 
     <div class="analysis-item" style="margin-bottom:8px">
-      <div class="k">Face angle · controls start line</div>
+      <div class="k">Face to Target · controls start line</div>
       <p style="margin:4px 0 0">Where the clubface points at impact relative to the target line. This is the single biggest factor in which direction the ball starts — more important than path. <strong>Target: within 1–2° of 0.</strong></p>
     </div>
     <div class="analysis-item" style="margin-bottom:8px">
-      <div class="k">Side angle (azimuth) · confirms start line</div>
+      <div class="k">Launch Direction · confirms start line</div>
       <p style="margin:4px 0 0">The actual direction the ball left the face. This is the real result — face angle is the cause, side angle is the effect. <strong>Target: as close to 0° as possible.</strong></p>
     </div>
     <div class="analysis-item" style="margin-bottom:8px">
@@ -386,15 +386,19 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <p style="margin:4px 0 0">The vertical angle the ball leaves the face. Combined with spin, this sets how the ball flies and how it lands. <strong>Typical full wedge range: 24–34°</strong> — lower for a knockdown, higher for a high, soft shot.</p>
     </div>
     <div class="analysis-item">
-      <div class="k">Total spin · stopping power</div>
+      <div class="k">Spin Rate · stopping power</div>
       <p style="margin:4px 0 0">Backspin rate. Higher spin means a steeper landing angle and more stopping power on the green, but too much can rob distance. <strong>Typical full wedge range: 7,000–10,000+ rpm.</strong></p>
+    </div>
+    <div class="analysis-item">
+      <div class="k">Descent Angle · will it stop</div>
+      <p style="margin:4px 0 0">How steeply the ball is falling when it lands — the direct answer to whether a shot will stop or release. Shaped by launch angle, spin, and dynamic loft together. <strong>Steeper (higher number) means more stopping power.</strong> Only tracked in the Flight-Window drill, where trajectory shape is the point.</p>
     </div>
 
     <h3 style="margin-top:14px">Which numbers matter for which skill</h3>
-    <p style="margin:4px 0 0"><strong>Start line:</strong> face angle first, side angle confirms it, path shapes the curve.</p>
+    <p style="margin:4px 0 0"><strong>Start line:</strong> Face to Target first, Launch Direction confirms it, path shapes the curve.</p>
     <p style="margin:6px 0 0"><strong>Distance control:</strong> ball speed, attack angle, dynamic loft.</p>
     <p style="margin:6px 0 0"><strong>Trajectory:</strong> launch angle, dynamic loft, spin.</p>
-    <p style="margin:6px 0 0"><strong>Spin / stopping power:</strong> total spin, attack angle, dynamic loft.</p>
+    <p style="margin:6px 0 0"><strong>Spin / stopping power:</strong> Spin Rate, attack angle, dynamic loft, descent angle.</p>
 
     <button id="closeGcquad" class="primary" style="margin-top:16px">Close</button>
   </div>
@@ -437,12 +441,13 @@ function safeGet(key,fallback=null){
 const GCQUAD_FIELDS={
   ballSpeed:{label:'Ball speed (mph)',step:0.1,hint:'Distance · should repeat closely for the same target every time',signed:false},
   launch:{label:'Launch angle (°)',step:0.1,hint:'Trajectory · roughly 24–34° on a full wedge shot',signed:false},
-  spin:{label:'Total spin (rpm)',step:1,hint:'Spin/stopping power · typically 7,000–10,000+ rpm',signed:false},
-  azimuth:{label:'Side angle (°)',step:0.1,hint:'Start line · the actual direction the ball started, target 0°',signed:true},
+  spin:{label:'Spin Rate (rpm)',step:1,hint:'Spin/stopping power · typically 7,000–10,000+ rpm',signed:false},
+  azimuth:{label:'Launch Direction (°)',step:0.1,hint:'Start line · the actual direction the ball started, target 0°',signed:true},
   path:{label:'Club path (°)',step:0.1,hint:'Shot shape · near 0° for a straight stock shot',signed:true},
-  face:{label:'Face angle (°)',step:0.1,hint:'Start line · biggest driver of direction, target within 1–2°',signed:true},
+  face:{label:'Face to Target (°)',step:0.1,hint:'Start line · biggest driver of direction, target within 1–2°',signed:true},
   attack:{label:'Attack angle (°)',step:0.1,hint:'Strike quality · slightly negative (−4° to −8°) for crisp contact',signed:true},
-  dynLoft:{label:'Dynamic loft (°)',step:0.1,hint:"Trajectory/spin · should track close to the club's stated loft",signed:false}
+  dynLoft:{label:'Dynamic loft (°)',step:0.1,hint:"Trajectory/spin · should track close to the club's stated loft",signed:false},
+  descent:{label:'Descent Angle (°)',step:0.1,hint:'Landing steepness · steeper (higher number) means more stopping power',signed:false}
 };
 function gcquadSetupLine(fieldIds){
   const names=fieldIds.map(id=>GCQUAD_FIELDS[id].label.replace(/\s*\([^)]*\)/,''));
@@ -474,7 +479,7 @@ function buildDrillTemplates(tier){
         {target:100,count:4,label:'100-yard calibration',instruction:'Use the stock 100-yard shot and complete the full routine.'}
       ],
       pass:3.5,
-      gcquadFocusText:'GCQuad focus: <strong>Face angle</strong> and <strong>Side angle</strong> tell you today’s start-line pattern. <strong>Ball speed</strong> tells you if the strike is consistent.',
+      gcquadFocusText:'GCQuad focus: <strong>Face to Target</strong> and <strong>Launch Direction</strong> tell you today’s start-line pattern. <strong>Ball speed</strong> tells you if the strike is consistent.',
       gcquadRequired:['ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft']
     },
     {
@@ -508,7 +513,7 @@ function buildDrillTemplates(tier){
       id:4,title:'Flight-Window Control',
       purpose:'Control low, stock and high trajectories without losing carry precision.',
       setup:[
-        gcquadSetupLine(['launch','dynLoft','attack','spin']),
+        gcquadSetupLine(['launch','dynLoft','attack','spin','descent']),
         'Confirm the 90-yard target line.'
       ],
       groups:[
@@ -517,8 +522,8 @@ function buildDrillTemplates(tier){
         {target:90,count:3,label:'High flight',trajectory:'High',instruction:'Hit the approved high 90-yard flight.'}
       ],
       pass:4,
-      gcquadFocusText:'GCQuad focus: <strong>Launch angle</strong>, <strong>dynamic loft</strong> and <strong>total spin</strong> — these define the trajectory window, not carry distance.',
-      gcquadRequired:['launch','dynLoft','attack','spin']
+      gcquadFocusText:'GCQuad focus: <strong>Launch angle</strong>, <strong>dynamic loft</strong>, <strong>Spin Rate</strong> and <strong>Descent Angle</strong> — these define the trajectory window and whether it will actually stop.',
+      gcquadRequired:['launch','dynLoft','attack','spin','descent']
     },
     {
       id:5,title:'Pressure Finish',
@@ -531,7 +536,7 @@ function buildDrillTemplates(tier){
       ],
       groups:[{random:true,min:tier.min,max:tier.max,count:5,label:'Pressure shots',instruction:'One committed shot. Imagine this approach decides the tournament.'}],
       pass:5,
-      gcquadFocusText:'GCQuad focus: <strong>Face angle</strong> and <strong>ball speed</strong> under pressure — watch whether numbers hold up when it counts.',
+      gcquadFocusText:'GCQuad focus: <strong>Face to Target</strong> and <strong>ball speed</strong> under pressure — watch whether numbers hold up when it counts.',
       gcquadRequired:[]
     }
   ];
@@ -753,7 +758,7 @@ el('saveShot').onclick=()=>{
     target,carry,
     side:num('side'),proximity:num('proximity'),strike:el('strike').value,
     ballSpeed:num('ballSpeed'),launch:num('launch'),spin:num('spin'),azimuth:num('azimuth'),
-    path:num('path'),face:num('face'),attack:num('attack'),dynLoft:num('dynLoft'),
+    path:num('path'),face:num('face'),attack:num('attack'),dynLoft:num('dynLoft'),descent:num('descent'),
     group:currentGroup().label,trajectory:currentGroup().trajectory||'Stock'
   };
   state.currentShots.push(shotRecord);
@@ -845,9 +850,9 @@ function generateCoachingInsights(d,shots){
     if(fc.length){
       const m=mean(fc);
       if(Math.abs(m)>1.5){
-        insights.push({level:'bad',title:'Start line',text:`Face angle averaged ${m>0?'+':''}${m.toFixed(1)}° — pointing ${m>0?'right':'left'} of target. This is very likely the direct cause of the start-line miss, more than swing path.`});
+        insights.push({level:'bad',title:'Start line',text:`Face to Target averaged ${m>0?'+':''}${m.toFixed(1)}° — pointing ${m>0?'right':'left'} of target. This is very likely the direct cause of the start-line miss, more than swing path.`});
       }else{
-        insights.push({level:'good',title:'Start line',text:`Face angle averaged ${m>0?'+':''}${m.toFixed(1)}° — close to square, start line is under control.`});
+        insights.push({level:'good',title:'Start line',text:`Face to Target averaged ${m>0?'+':''}${m.toFixed(1)}° — close to square, start line is under control.`});
       }
     }
   }
@@ -880,6 +885,15 @@ function generateCoachingInsights(d,shots){
       }
       if(lowGap>=3&&highGap>=3){
         insights.push({level:'good',title:'Trajectory windows',text:`Low and High windows both separated cleanly from Stock (${lowGap.toFixed(1)}° lower, ${highGap.toFixed(1)}° higher) — trajectory control is working.`});
+      }
+    }
+    if(low.length&&high.length&&vals(low,'descent').length&&vals(high,'descent').length){
+      const lowDescent=mean(vals(low,'descent'));
+      const highDescent=mean(vals(high,'descent'));
+      if(lowDescent>=highDescent-2){
+        insights.push({level:'warn',title:'Stopping power',text:`Descent angle on the Low window (${lowDescent.toFixed(1)}°) isn't much shallower than High (${highDescent.toFixed(1)}°) — the low shot may release and run more than intended once it lands.`});
+      }else{
+        insights.push({level:'good',title:'Stopping power',text:`Descent angle separated well between windows (Low ${lowDescent.toFixed(1)}° vs High ${highDescent.toFixed(1)}°) — the low shot will release more, the high shot will stop faster, as expected.`});
       }
     }
   }
@@ -1084,10 +1098,10 @@ function download(name,type,text){
 }
 el('exportJson').onclick=()=>download('ayden-precision-beta-backup.json','application/json',JSON.stringify({version:2,sessions:state.sessions,active:loadActive()},null,2));
 el('exportCsv').onclick=()=>{
-  const headers=['sessionDate','tier','location','drill','target','carry','absoluteCarryError','side','proximity','strike','ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft'];
+  const headers=['sessionDate','tier','location','drill','target','carry','absoluteCarryError','side','proximity','strike','ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft','descent'];
   const rows=[headers.join(',')];
   state.sessions.forEach(s=>s.drills.forEach(d=>d.shots.forEach(x=>{
-    const vals=[s.date,s.tierLevel||1,s.location,d.title,x.target,x.carry,Math.abs(x.carry-x.target),x.side,x.proximity,x.strike,x.ballSpeed,x.launch,x.spin,x.azimuth,x.path,x.face,x.attack,x.dynLoft];
+    const vals=[s.date,s.tierLevel||1,s.location,d.title,x.target,x.carry,Math.abs(x.carry-x.target),x.side,x.proximity,x.strike,x.ballSpeed,x.launch,x.spin,x.azimuth,x.path,x.face,x.attack,x.dynLoft,x.descent];
     rows.push(vals.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(','))
   })));
   download('ayden-precision-beta-shots.csv','text/csv',rows.join('\n'))
