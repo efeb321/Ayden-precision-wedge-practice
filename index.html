@@ -35,6 +35,10 @@ p{line-height:1.45}
 label{display:block;font-size:14px;font-weight:600}
 input,select,textarea,button{font:inherit}
 input,select,textarea{width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#fff;color:var(--text);font-size:17px}
+.drill-check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;margin-top:8px}
+.drill-check input[type=checkbox]{width:auto;margin:0;flex:none;transform:scale(1.3)}
+.drill-check .dc-text{flex:1;font-weight:600;font-size:14px}
+.drill-check .dc-text span{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
 button{border:0;border-radius:13px;padding:13px 16px;font-weight:700}
 .primary{width:100%;background:var(--accent);color:#fff;font-size:17px}
 .secondary{background:#e2e8f0;color:#0f172a}
@@ -162,7 +166,13 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       </label>
       <label>Conditions<input id="conditions" placeholder="Indoor, wind, turf, temperature"></label>
     </div>
+    <div style="margin-top:14px">
+      <h3 style="margin-bottom:6px">Today's drills</h3>
+      <p class="small">Uncheck any drill you want to skip today. At least one must stay checked.</p>
+      <div id="drillPicker"></div>
+    </div>
     <p class="small">The app will walk Ayden through every setup step and every shot. Only the active step appears.</p>
+    <p id="drillPickerMessage" class="small" style="color:var(--bad)"></p>
     <div class="button-row">
       <button id="startPractice" class="primary">Begin Practice</button>
       <button id="openGcquadGuide1" class="ghost" type="button">GCQuad Numbers Guide</button>
@@ -181,6 +191,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <p id="setupInstruction" class="instruction"></p>
       <div id="setupControl"></div>
       <button id="setupNext" class="primary">Done — Next Step</button>
+      <button id="skipDrillSetup" class="ghost" style="margin-top:10px">Skip This Drill</button>
     </div>
 
     <div id="shotCard" class="card hidden">
@@ -202,8 +213,8 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
           </div>
           <div class="small" id="sideSignHint">Tap ± to switch left/right</div>
         </label>
-        <label>Proximity
-          <input id="proximity" inputmode="decimal" type="number" step="0.1" placeholder="feet">
+        <label>Distance from target
+          <input id="proximity" inputmode="decimal" type="number" step="0.1" placeholder="yards">
         </label>
         <label>Strike
           <select id="strike">
@@ -219,6 +230,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
 
       <button id="saveShot" class="primary" style="margin-top:14px">Save Shot</button>
       <div id="shotMessage" class="small" style="margin-top:8px"></div>
+      <button id="skipDrillShot" class="ghost" style="margin-top:10px">Skip This Drill</button>
     </div>
 
     <div id="analysisCard" class="card hidden">
@@ -228,6 +240,8 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <div id="analysisComparison" class="coach-banner" style="margin-top:10px"></div>
       <p id="analysisMessage"></p>
       <div id="coachingInsights"></div>
+      <button id="retryDrill" class="primary hidden" style="background:var(--bad)">Try Again</button>
+      <button id="finishDrillAnyway" class="ghost hidden" style="margin-top:10px">Move On Without Passing</button>
       <button id="nextDrill" class="primary">Start Next Drill</button>
     </div>
 
@@ -237,6 +251,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <div id="tomorrowFocus" class="focus-card"></div>
       <p id="finalMessage"></p>
       <button id="finishPractice" class="primary">Save Today’s Practice</button>
+      <button id="shareReportToday" class="ghost" style="margin-top:10px">Share Session Report</button>
     </div>
   </div>
 
@@ -535,7 +550,7 @@ function buildDrillTemplates(tier){
         'The app will choose five random distances.'
       ],
       groups:[{random:true,min:tier.min,max:tier.max,count:5,label:'Pressure shots',instruction:'One committed shot. Imagine this approach decides the tournament.'}],
-      pass:5,
+      pass:3,
       gcquadFocusText:'GCQuad focus: <strong>Face to Target</strong> and <strong>ball speed</strong> under pressure — watch whether numbers hold up when it counts.',
       gcquadRequired:[]
     }
@@ -604,7 +619,24 @@ el('practiceTab').onclick=()=>switchTab('practice');
 el('progressTab').onclick=()=>switchTab('progress');
 el('dataTab').onclick=()=>switchTab('data');
 
+function sessionDrills(){
+  if(!state.current||!state.current.selectedDrillIds)return drillTemplates;
+  return drillTemplates.filter(d=>state.current.selectedDrillIds.includes(d.id));
+}
+function renderDrillPicker(){
+  el('drillPicker').innerHTML=drillTemplates.map(d=>`
+    <div class="drill-check">
+      <input type="checkbox" id="drillCheck${d.id}" data-drill-id="${d.id}" checked>
+      <div class="dc-text">Drill ${d.id}: ${d.title}<span>${d.purpose}</span></div>
+    </div>`).join('');
+}
 function beginPractice(){
+  const selectedIds=Array.from(document.querySelectorAll('#drillPicker input[type=checkbox]:checked')).map(cb=>Number(cb.dataset.drillId));
+  if(!selectedIds.length){
+    el('drillPickerMessage').textContent='Select at least one drill to begin.';
+    return;
+  }
+  el('drillPickerMessage').textContent='';
   state.current={
     id:Date.now(),
     date:el('practiceDate').value||todayISO(),
@@ -613,6 +645,7 @@ function beginPractice(){
     conditions:el('conditions').value,
     startedAt:new Date().toISOString(),
     tierLevel:currentTier.level,
+    selectedDrillIds:selectedIds,
     drills:[]
   };
   state.drillIndex=0;state.setupIndex=0;state.groupIndex=0;state.shotInGroup=0;state.currentShots=[];
@@ -626,7 +659,7 @@ function beginPractice(){
 }
 el('startPractice').onclick=beginPractice;
 
-function currentDrill(){return drillTemplates[state.drillIndex]}
+function currentDrill(){return sessionDrills()[state.drillIndex]}
 function currentGroup(){return currentDrill().groups[state.groupIndex]}
 function targetForCurrentShot(){
   const g=currentGroup();
@@ -637,7 +670,7 @@ function targetForCurrentShot(){
   }
   return g.target;
 }
-function totalPlanned(){return drillTemplates.reduce((s,d)=>s+d.groups.reduce((x,g)=>x+g.count,0),0)}
+function totalPlanned(){return sessionDrills().reduce((s,d)=>s+d.groups.reduce((x,g)=>x+g.count,0),0)}
 function shotsDone(){
   return state.current?state.current.drills.reduce((s,d)=>s+d.shots.length,0)+state.currentShots.length:0
 }
@@ -649,7 +682,7 @@ function updateTop(){
   el('mCoachScore').textContent=score===null?'—':score;
   el('mStreak').textContent=calcStreak();
   el('overallBar').style.width=(shotsDone()/totalPlanned()*100)+'%';
-  el('phaseLabel').textContent=state.current?`Drill ${state.drillIndex+1} of ${drillTemplates.length}`:'Ready';
+  el('phaseLabel').textContent=state.current?`Drill ${state.drillIndex+1} of ${sessionDrills().length}`:'Ready';
 }
 function coachScore(shots){
   if(!shots.length)return null;
@@ -786,13 +819,17 @@ function advanceShot(){
 }
 function completeDrill(){
   const d=currentDrill();
-  const result={id:d.id,title:d.title,shots:[...state.currentShots]};
+  const avgCarry=avgAbs(state.currentShots,x=>x.carry-x.target);
+  const passed=avgCarry<=d.pass;
+  const attemptNumber=d.id===5?state.current.drills.filter(x=>x.id===5).length+1:null;
+  const result={id:d.id,title:d.title,shots:[...state.currentShots],passed,attempt:attemptNumber};
   state.current.drills.push(result);
   state.currentShots=[];
   saveActive();
   el('shotCard').classList.add('hidden');
   el('analysisCard').classList.remove('hidden');
-  renderDrillAnalysis(result,d);
+  const retryable=d.id===5&&!passed;
+  renderDrillAnalysis(result,d,retryable);
 }
 function avgAbs(shots,keyFn){return shots.reduce((s,x)=>s+Math.abs(keyFn(x)),0)/shots.length}
 function mean(arr){return arr.reduce((a,b)=>a+b,0)/arr.length}
@@ -900,7 +937,7 @@ function generateCoachingInsights(d,shots){
 
   return insights;
 }
-function renderDrillAnalysis(result,d){
+function renderDrillAnalysis(result,d,retryable){
   const shots=result.shots;
   const avgCarry=avgAbs(shots,x=>x.carry-x.target);
   const avgSide=shots.filter(x=>x.side!==null).length?avgAbs(shots.filter(x=>x.side!==null),x=>x.side):null;
@@ -912,7 +949,7 @@ function renderDrillAnalysis(result,d){
   const passed=avgCarry<=d.pass;
   el('analysisStatus').textContent=passed?'Passed':'Needs Work';
   el('analysisStatus').className='badge '+(passed?'status-good':avgCarry<=d.pass+1?'status-warn':'status-bad');
-  el('analysisTitle').textContent=`${d.title} analysis`;
+  el('analysisTitle').textContent=`${d.title} analysis`+(result.attempt?` — Attempt ${result.attempt}`:'');
   el('analysisGrid').innerHTML=`
     <div class="analysis-item"><div class="k">Average carry error</div><div class="v">${avgCarry.toFixed(1)} yd</div></div>
     <div class="analysis-item"><div class="k">Average side error</div><div class="v">${avgSide===null?'—':avgSide.toFixed(1)+' yd'}</div></div>
@@ -921,7 +958,7 @@ function renderDrillAnalysis(result,d){
     <div class="analysis-item"><div class="k">Center strikes</div><div class="v">${centered}%</div></div>
     <div class="analysis-item"><div class="k">Shots completed</div><div class="v">${shots.length}</div></div>`;
   const bias=long>short+1?'long':short>long+1?'short':'balanced';
-  const prior=state.sessions.flatMap(s=>s.drills).filter(x=>x.id===d.id);
+  const prior=state.sessions.flatMap(s=>s.drills).filter(x=>x.id===d.id&&x.shots.length);
   if(prior.length){
     const priorAvg=prior.reduce((sum,r)=>sum+avgAbs(r.shots,x=>x.carry-x.target),0)/prior.length;
     const change=priorAvg-avgCarry;
@@ -935,30 +972,58 @@ function renderDrillAnalysis(result,d){
   }
   el('analysisMessage').textContent=passed
     ?`Good work. Carry control passed this drill. The distance pattern was ${bias}.`
+    :retryable
+    ?`Carry control missed the pass standard (${d.pass} yards). The main distance pattern was ${bias}. Review what's driving it below, then try again — or move on without passing if that's enough for today. Every attempt is saved.`
     :`Carry control missed the drill standard. The main distance pattern was ${bias}. Record it, then move on without making a swing change.`;
   const insights=generateCoachingInsights(d,shots);
   el('coachingInsights').innerHTML=insights.length
     ?'<h3 style="margin:14px 0 4px">What the numbers show</h3>'+insights.map(i=>`<div class="insight-item insight-${i.level}"><strong>${i.title}</strong>${i.text}</div>`).join('')
     :'';
-  el('nextDrill').textContent=state.drillIndex===drillTemplates.length-1?'See Final Practice Summary':'Start Drill '+(state.drillIndex+2);
+  el('retryDrill').classList.toggle('hidden',!retryable);
+  el('finishDrillAnyway').classList.toggle('hidden',!retryable);
+  el('nextDrill').classList.toggle('hidden',!!retryable);
+  if(!retryable){
+    el('nextDrill').textContent=state.drillIndex===sessionDrills().length-1?'See Final Practice Summary':'Start Drill '+sessionDrills()[state.drillIndex+1].id;
+  }
 }
-el('nextDrill').onclick=()=>{
-  if(state.drillIndex<drillTemplates.length-1){
+function goToNextDrillOrFinish(){
+  if(state.drillIndex<sessionDrills().length-1){
     state.drillIndex++;state.setupIndex=0;state.groupIndex=0;state.shotInGroup=0;saveActive();showDrillIntro()
   }else showFinal();
+}
+el('nextDrill').onclick=goToNextDrillOrFinish;
+el('finishDrillAnyway').onclick=goToNextDrillOrFinish;
+el('retryDrill').onclick=()=>{
+  currentGroup().generated=undefined;
+  state.groupIndex=0;state.shotInGroup=0;state.currentShots=[];
+  saveActive();
+  el('analysisCard').classList.add('hidden');
+  el('shotCard').classList.remove('hidden');
+  showShot();
 };
+function skipCurrentDrill(){
+  if(!confirm('Skip this drill? No shots will be recorded for it today.'))return;
+  const d=currentDrill();
+  state.current.drills.push({id:d.id,title:d.title,shots:[],skipped:true});
+  state.currentShots=[];
+  state.groupIndex=0;state.shotInGroup=0;state.setupIndex=0;
+  saveActive();
+  goToNextDrillOrFinish();
+}
+el('skipDrillSetup').onclick=skipCurrentDrill;
+el('skipDrillShot').onclick=skipCurrentDrill;
 function showFinal(){
   el('analysisCard').classList.add('hidden');
   el('finishCard').classList.remove('hidden');
   const shots=state.current.drills.flatMap(d=>d.shots);
   const avg=avgAbs(shots,x=>x.carry-x.target);
   const inside=shots.filter(x=>x.proximity!==null);
-  const inside15=inside.length?Math.round(inside.filter(x=>x.proximity<=15).length/inside.length*100):null;
+  const inside5=inside.length?Math.round(inside.filter(x=>x.proximity<=5).length/inside.length*100):null;
   const center=Math.round(shots.filter(x=>x.strike==='Center').length/shots.length*100);
   el('finalSummary').innerHTML=`
     <div class="analysis-item"><div class="k">Total shots</div><div class="v">${shots.length}</div></div>
     <div class="analysis-item"><div class="k">Average carry error</div><div class="v">${avg.toFixed(1)} yd</div></div>
-    <div class="analysis-item"><div class="k">Inside 15 feet</div><div class="v">${inside15===null?'—':inside15+'%'}</div></div>
+    <div class="analysis-item"><div class="k">Inside 5 yards</div><div class="v">${inside5===null?'—':inside5+'%'}</div></div>
     <div class="analysis-item"><div class="k">Center strikes</div><div class="v">${center}%</div></div>`;
   const distanceGroups={};
   shots.forEach(x=>{if(!distanceGroups[x.target])distanceGroups[x.target]=[];distanceGroups[x.target].push(Math.abs(x.carry-x.target))});
@@ -1062,8 +1127,15 @@ function renderProgress(){
 
   el('historyList').innerHTML=[...recent6].reverse().map(s=>{
     const a=sessionAvg(s);
-    return `<div class="history-row"><strong>${s.date}</strong> · ${s.location}<br>${allSessionShots(s).length} shots · ${a.toFixed(1)} yd average carry error</div>`
+    return `<div class="history-row"><strong>${s.date}</strong> · ${s.location}<br>${allSessionShots(s).length} shots · ${a.toFixed(1)} yd average carry error
+      <button type="button" class="ghost shareHistoryBtn" data-session-id="${s.id}" style="margin-top:8px;width:auto;padding:8px 14px">Share Report</button></div>`
   }).join('');
+  document.querySelectorAll('.shareHistoryBtn').forEach(btn=>{
+    btn.onclick=()=>{
+      const session=state.sessions.find(s=>String(s.id)===btn.dataset.sessionId);
+      if(session)shareSessionReport(session);
+    };
+  });
 }
 function calcStreak(){
   const dates=[...new Set(state.sessions.map(s=>s.date))].sort().reverse();
@@ -1091,6 +1163,83 @@ function renderStorage(){
   }
   el('storageStatus').textContent=`${state.sessions.length} beta practices saved separately on this device · approximately ${(bytes/1024).toFixed(1)} KB used.`;
 }
+function stripTags(s){return (s||'').replace(/<[^>]+>/g,'')}
+function buildSessionReportText(session){
+  const lines=[];
+  lines.push('AYDEN PRECISION COACH — SESSION REPORT');
+  lines.push('='.repeat(40));
+  lines.push('Date: '+session.date);
+  lines.push('Location: '+session.location);
+  lines.push('Conditions: '+(session.conditions||'—'));
+  lines.push('Tier: '+(session.tierLevel||1));
+  lines.push('Ball: '+session.ball);
+  lines.push('');
+  const allShots=allSessionShots(session);
+  const overallAvg=allShots.length?avgAbs(allShots,x=>x.carry-x.target):null;
+  lines.push('SESSION SUMMARY');
+  lines.push('Total shots: '+allShots.length);
+  lines.push('Average carry error: '+(overallAvg===null?'—':overallAvg.toFixed(1)+' yd'));
+  lines.push('Coach score: '+(allShots.length?coachScore(allShots):'—'));
+  lines.push('');
+  lines.push('DRILL-BY-DRILL RESULTS');
+  lines.push('-'.repeat(40));
+  session.drills.forEach(d=>{
+    const label='Drill '+d.id+': '+d.title+(d.attempt?' — Attempt '+d.attempt:'');
+    if(!d.shots.length){
+      lines.push(label+' — SKIPPED');
+      lines.push('');
+      return;
+    }
+    const avgCarry=avgAbs(d.shots,x=>x.carry-x.target);
+    const sideShots=d.shots.filter(x=>x.side!==null);
+    const avgSide=sideShots.length?avgAbs(sideShots,x=>x.side):null;
+    const centered=Math.round(d.shots.filter(x=>x.strike==='Center').length/d.shots.length*100);
+    const drillDef=drillTemplates.find(t=>t.id===d.id);
+    const passStatus=drillDef?(avgCarry<=drillDef.pass?'PASSED':'NEEDS WORK'):'';
+    lines.push(label+(passStatus?' — '+passStatus:''));
+    lines.push('  Average carry error: '+avgCarry.toFixed(1)+' yd');
+    lines.push('  Average side error: '+(avgSide===null?'—':avgSide.toFixed(1)+' yd'));
+    lines.push('  Center strikes: '+centered+'%');
+    lines.push('  Shots: '+d.shots.length);
+    if(drillDef){
+      const insights=generateCoachingInsights(drillDef,d.shots);
+      if(insights.length){
+        lines.push('  Coaching notes:');
+        insights.forEach(i=>lines.push('    - ['+i.level.toUpperCase()+'] '+i.title+': '+stripTags(i.text)));
+      }
+    }
+    lines.push('');
+  });
+  lines.push('RAW SHOT DATA');
+  lines.push('-'.repeat(40));
+  lines.push('drill | attempt | target | carry | side | proximity | strike | ballSpeed | launch | spin | azimuth(LaunchDir) | path | face(FaceToTarget) | attack | dynLoft | descent');
+  session.drills.forEach(d=>{
+    d.shots.forEach(x=>{
+      lines.push([d.title,d.attempt||'','',x.target,x.carry,x.side,x.proximity,x.strike,x.ballSpeed,x.launch,x.spin,x.azimuth,x.path,x.face,x.attack,x.dynLoft,x.descent].map(v=>v===null||v===undefined?'—':v).join(' | '));
+    });
+  });
+  lines.push('');
+  lines.push('— End of report —');
+  return lines.join('\n');
+}
+async function shareSessionReport(session){
+  const text=buildSessionReportText(session);
+  const filename='Ayden-Session-'+session.date+'.txt';
+  try{
+    const file=new File([text],filename,{type:'text/plain'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:'Ayden Practice Session — '+session.date,text:'Practice session report for '+session.date});
+      return;
+    }
+  }catch(e){
+    if(e && e.name==='AbortError')return; // user cancelled the share sheet
+  }
+  download(filename,'text/plain',text);
+}
+el('shareReportToday').onclick=()=>{
+  if(state.current)shareSessionReport(state.current);
+};
+
 function download(name,type,text){
   const blob=new Blob([text],{type});
   const url=URL.createObjectURL(blob);
@@ -1158,7 +1307,7 @@ function buildFakeSession(dateStr,index){
           target,
           carry:Number((target+signed).toFixed(1)),
           side:Number(((rand()-.5)*5).toFixed(1)),
-          proximity:Number((8+rand()*18).toFixed(1)),
+          proximity:Number((2+rand()*7).toFixed(1)),
           strike:rand()>.18?'Center':(rand()>.5?'Toe':'Low'),
           ballSpeed:null,launch:null,spin:null,azimuth:null,
           path:null,face:null,attack:null,dynLoft:null,
@@ -1205,13 +1354,14 @@ const active=loadActive();
 if(active&&active.current){
   el('resumeScreen').classList.remove('hidden');
   el('startScreen').classList.add('hidden');
-  const d=drillTemplates[active.drillIndex||0];
+  const activeSelected=(active.current.selectedDrillIds?drillTemplates.filter(dt=>active.current.selectedDrillIds.includes(dt.id)):drillTemplates);
+  const d=activeSelected[active.drillIndex||0]||drillTemplates[0];
   const completed=(active.current.drills||[]).reduce((s,x)=>s+x.shots.length,0)+(active.currentShots||[]).length;
   el('resumeDescription').textContent=`${active.current.date} · Drill ${d.id}: ${d.title} · ${completed} shots completed`;
 }
 function tierReadiness(){
   const sessions=state.sessions.filter(s=>(s.tierLevel||1)===currentTier.level);
-  const ladderResults=sessions.flatMap(s=>s.drills.filter(d=>d.id===2));
+  const ladderResults=sessions.flatMap(s=>s.drills.filter(d=>d.id===2&&d.shots.length));
   if(ladderResults.length<3)return false;
   const recent=ladderResults.slice(-3);
   return recent.every(r=>avgAbs(r.shots,x=>x.carry-x.target)<=2.5);
@@ -1236,6 +1386,7 @@ el('expandTierBtn').onclick=()=>{
   saveTierLevel(currentTier.level);
   drillTemplates=buildDrillTemplates(currentTier);
   refreshTierUI();
+  renderDrillPicker();
 };
 function openGcquadGuide(){el('gcquadDialog').showModal()}
 el('openGcquadGuide1').onclick=openGcquadGuide;
@@ -1267,192 +1418,4 @@ function calibDue(){return daysSinceLastCalib()>=14}
 function refreshCalibUI(){
   const due=calibDue();
   const type=nextCalibType();
-  if(calibData.sessions.length){
-    const last=calibData.sessions[calibData.sessions.length-1];
-    el('calibStatus').textContent=`Last calibration: ${new Date(last.date).toLocaleDateString()} (Session ${last.type} — ${CALIB_SESSION_LENGTHS[last.type].join(' & ')})`;
-  }else{
-    el('calibStatus').textContent='Not started yet.';
-  }
-  el('calibDueBadge').textContent=due?'Due now':'Not due yet';
-  el('calibDueBadge').className='badge '+(due?'status-warn':'status-good');
-  el('startCalibBtn').textContent=`Start Calibration — Session ${type} (${CALIB_SESSION_LENGTHS[type].join(' & ')})`;
-}
-function buildCalibGroups(type){
-  const lengths=CALIB_SESSION_LENGTHS[type];
-  const groups=[];
-  WEDGE_CLUBS.forEach(c=>{
-    lengths.forEach(len=>{
-      groups.push({club:c.loft,clubLabel:c.label,length:len,count:3});
-    });
-  });
-  return groups;
-}
-function startCalibration(){
-  const type=nextCalibType();
-  activeCalib={type,groups:buildCalibGroups(type),groupIndex:0,shotInGroup:0,shots:[]};
-  el('startScreen').classList.add('hidden');
-  el('calibView').classList.remove('hidden');
-  el('calibResultCard').classList.add('hidden');
-  el('calibScreen').classList.remove('hidden');
-  showCalibShot();
-}
-el('startCalibBtn').onclick=startCalibration;
-function currentCalibGroup(){return activeCalib.groups[activeCalib.groupIndex]}
-function renderCalibGcquadFields(){
-  const req=['ballSpeed','attack','dynLoft','spin'];
-  el('calibDetails').innerHTML=req.map(id=>{
-    const m=GCQUAD_FIELDS[id];
-    const fid='calib_'+id;
-    const signBtn=m.signed?`<button type="button" class="ghost signToggle" data-target="${fid}" style="width:52px;flex:none">±</button>`:'';
-    return `<label>${m.label}
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <input id="${fid}" type="number" step="${m.step}" style="flex:1;margin-top:0">
-        ${signBtn}
-      </div>
-      <div class="small">${m.hint}</div>
-    </label>`;
-  }).join('');
-}
-function showCalibShot(){
-  const g=currentCalibGroup();
-  el('calibClub').textContent=g.clubLabel;
-  el('calibLength').textContent=g.length+' swing';
-  el('calibProgress').textContent=`Group ${activeCalib.groupIndex+1} of ${activeCalib.groups.length}`;
-  el('calibShotCount').textContent=`Shot ${activeCalib.shotInGroup+1} of ${g.count}`;
-  el('calibCarry').value='';
-  renderCalibGcquadFields();
-  el('calibMessage').textContent='';
-}
-el('calibView').addEventListener('click',e=>{
-  const btn=e.target.closest('.signToggle');
-  if(!btn)return;
-  const input=document.getElementById(btn.dataset.target);
-  if(!input)return;
-  if(input.value===''){input.value='0';return}
-  input.value=(Number(input.value)*-1).toString();
-});
-function calibNum(id){
-  const input=document.getElementById(id);
-  if(!input)return null;
-  const v=input.value;
-  return v===''?null:Number(v);
-}
-el('saveCalibShot').onclick=()=>{
-  const carry=calibNum('calibCarry');
-  if(carry===null){el('calibMessage').textContent='Enter actual carry before saving.';return}
-  const req=['calib_ballSpeed','calib_attack','calib_dynLoft','calib_spin'];
-  const missing=req.filter(id=>calibNum(id)===null);
-  if(missing.length){el('calibMessage').textContent='Fill in all GCQuad fields before saving.';return}
-  const g=currentCalibGroup();
-  activeCalib.shots.push({
-    club:g.club,length:g.length,carry,
-    ballSpeed:calibNum('calib_ballSpeed'),attack:calibNum('calib_attack'),
-    dynLoft:calibNum('calib_dynLoft'),spin:calibNum('calib_spin')
-  });
-  advanceCalibShot();
-};
-function advanceCalibShot(){
-  const g=currentCalibGroup();
-  if(activeCalib.shotInGroup<g.count-1){activeCalib.shotInGroup++;showCalibShot()}
-  else if(activeCalib.groupIndex<activeCalib.groups.length-1){activeCalib.groupIndex++;activeCalib.shotInGroup=0;showCalibShot()}
-  else{finishCalibration()}
-}
-function finishCalibration(){
-  calibData.sessions.push({date:new Date().toISOString(),type:activeCalib.type,shots:activeCalib.shots});
-  saveCalibData();
-  el('calibScreen').classList.add('hidden');
-  el('calibResultCard').classList.remove('hidden');
-  renderCalibResult();
-  activeCalib=null;
-}
-function renderCalibResult(){
-  const session=calibData.sessions[calibData.sessions.length-1];
-  const byGroup={};
-  session.shots.forEach(x=>{
-    const key=x.club+'|'+x.length;
-    (byGroup[key]=byGroup[key]||[]).push(x.carry);
-  });
-  const labelByLoft={};
-  WEDGE_CLUBS.forEach(c=>labelByLoft[c.loft]=c.label);
-  el('calibResultGrid').innerHTML=Object.keys(byGroup).map(k=>{
-    const [loft,len]=k.split('|');
-    const avg=mean(byGroup[k]);
-    return `<div class="analysis-item"><div class="k">${labelByLoft[loft]} · ${len}</div><div class="v">${avg.toFixed(1)} yd</div></div>`;
-  }).join('');
-  el('calibResultNote').textContent=`Session ${session.type} complete. Check the Wedge Yardage Chart in Progress for the full picture once both session types have run.`;
-}
-el('calibDone').onclick=()=>{
-  el('calibResultCard').classList.add('hidden');
-  el('calibView').classList.add('hidden');
-  el('startScreen').classList.remove('hidden');
-  refreshCalibUI();
-};
-function computeWedgeChart(){
-  const allShots=calibData.sessions.flatMap(s=>s.shots);
-  const rows=[];
-  WEDGE_CLUBS.forEach(c=>{
-    ['7:30','9:00','10:30','Full'].forEach(len=>{
-      const shots=allShots.filter(x=>x.club===c.loft&&x.length===len);
-      rows.push({
-        club:c.label,length:len,
-        count:shots.length,
-        avg:shots.length?mean(shots.map(x=>x.carry)):null,
-        confident:shots.length>=3
-      });
-    });
-  });
-  return rows;
-}
-function decelerationCheck(){
-  const allShots=calibData.sessions.flatMap(s=>s.shots);
-  const flags=[];
-  WEDGE_CLUBS.forEach(c=>{
-    const shortShots=allShots.filter(x=>x.club===c.loft&&(x.length==='7:30'||x.length==='9:00'));
-    const longShots=allShots.filter(x=>x.club===c.loft&&(x.length==='10:30'||x.length==='Full'));
-    if(shortShots.length>=3&&longShots.length>=3){
-      const shortAttack=mean(shortShots.map(x=>x.attack));
-      const longAttack=mean(longShots.map(x=>x.attack));
-      const gap=shortAttack-longAttack;
-      if(gap>2){
-        flags.push({level:'warn',title:c.label+' — possible steering',text:`Attack angle is ${gap.toFixed(1)}° shallower on the shorter swings (7:30/9:00) than the longer ones (${longAttack.toFixed(1)}° vs ${shortAttack.toFixed(1)}°). That's the data signature of guiding the club to a position instead of accelerating through it — worth a look.`});
-      }
-    }
-  });
-  return flags;
-}
-function renderWedgeChart(){
-  const rows=computeWedgeChart();
-  el('wedgeChartGrid').innerHTML=rows.map(r=>`
-    <div class="analysis-item">
-      <div class="k">${r.club} · ${r.length}</div>
-      <div class="v">${r.avg===null?'—':r.avg.toFixed(1)+' yd'}</div>
-      <div class="small">${r.count} shot${r.count===1?'':'s'}${r.count&&!r.confident?' · building':''}</div>
-    </div>`).join('');
-  const flags=decelerationCheck();
-  el('wedgeChartFlags').innerHTML=flags.length
-    ?flags.map(f=>`<div class="insight-item insight-${f.level}"><strong>${f.title}</strong>${f.text}</div>`).join('')
-    :(calibData.sessions.length?'<div class="insight-item insight-good"><strong>No steering pattern detected</strong>Attack angle looks consistent across swing lengths so far.</div>':'');
-}
-refreshCalibUI();
-
-el('resumePractice').onclick=()=>restoreActive(loadActive());
-el('discardPractice').onclick=()=>{
-  safeRemove(ACTIVE_KEY);
-  el('resumeScreen').classList.add('hidden');
-  el('startScreen').classList.remove('hidden');
-};
-
-updateTop();
-refreshTierUI();
-</script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
-}
-</script>
-
-</body>
-</html>
+  if(calibData.sessions.le
