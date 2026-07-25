@@ -123,6 +123,19 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <button id="expandTierBtn" class="ghost hidden" style="margin-top:10px">Expand the practice range</button>
   </div>
 
+  <div id="wedgeCalibCard" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div>
+        <div class="small">Wedge Calibration</div>
+        <h2 style="margin:4px 0 0">Yardage chart by club &amp; swing length</h2>
+      </div>
+      <span id="calibDueBadge" class="badge">—</span>
+    </div>
+    <p id="calibStatus" class="small" style="margin-top:6px">Not started yet</p>
+    <p class="small">Every calibration session covers all 4 wedges (58°, 54°, 50°, 46° PW) at two swing lengths. Sessions alternate 7:30/9:00 and 10:30/Full, so the full chart refreshes about every 4 weeks. Separate from the daily 5 drills.</p>
+    <button id="startCalibBtn" class="ghost" style="margin-top:10px">Start Calibration</button>
+  </div>
+
   <div id="resumeScreen" class="card hidden">
     <span class="badge">Practice saved</span>
     <h2 style="margin-top:10px">Continue unfinished practice?</h2>
@@ -226,6 +239,34 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <button id="finishPractice" class="primary">Save Today’s Practice</button>
     </div>
   </div>
+
+  <div id="calibView" class="hidden">
+    <div id="calibScreen" class="card hidden">
+      <span class="badge">Wedge Calibration</span>
+      <h2 id="calibClub" style="margin-top:10px"></h2>
+      <p id="calibLength" class="small"></p>
+      <p id="calibProgress" class="small"></p>
+      <p class="instruction" style="margin-top:10px">Same tempo back and through — accelerate into the ball, don't guide it to a stop.</p>
+      <p id="calibShotCount" class="small"></p>
+
+      <label style="margin-top:10px">Actual carry
+        <input id="calibCarry" inputmode="decimal" type="number" step="0.1" placeholder="yards">
+      </label>
+
+      <div id="calibDetails" class="grid2" style="margin-top:10px"></div>
+
+      <button id="saveCalibShot" class="primary" style="margin-top:14px">Save Shot</button>
+      <div id="calibMessage" class="small" style="margin-top:8px"></div>
+    </div>
+
+    <div id="calibResultCard" class="card hidden">
+      <span class="badge status-good">Calibration session complete</span>
+      <h2 style="margin-top:10px">This session's results</h2>
+      <div id="calibResultGrid" class="analysis-grid"></div>
+      <p id="calibResultNote" class="small" style="margin-top:10px"></p>
+      <button id="calibDone" class="primary">Done</button>
+    </div>
+  </div>
 </section>
 
 <section id="progressView" class="hidden">
@@ -248,6 +289,13 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <h2>Progress by distance</h2>
     <p class="small">Lower carry error is better. This identifies exactly where improvement is happening.</p>
     <div id="distanceProgress"></div>
+  </div>
+
+  <div class="card">
+    <h2>Wedge Yardage Chart</h2>
+    <p class="small">Built from Wedge Calibration sessions — club × swing length → average carry. Runs every ~2 weeks, alternating short and long swing lengths.</p>
+    <div id="wedgeChartFlags"></div>
+    <div id="wedgeChartGrid" class="analysis-grid" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -933,6 +981,7 @@ function weekKey(dateStr){
   return d.toISOString().slice(0,10)
 }
 function renderProgress(){
+  renderWedgeChart();
   const sessions=[...state.sessions].sort((a,b)=>a.date.localeCompare(b.date));
   const recent6=sessions.filter(s=>(new Date()-new Date(s.date+'T12:00:00'))<=183*86400000);
   if(!recent6.length){
@@ -1178,6 +1227,199 @@ function openGcquadGuide(){el('gcquadDialog').showModal()}
 el('openGcquadGuide1').onclick=openGcquadGuide;
 el('openGcquadGuide2').onclick=openGcquadGuide;
 el('closeGcquad').onclick=()=>el('gcquadDialog').close();
+
+// ---------- Wedge Calibration ----------
+const CALIB_KEY='ayden_wedge_calib_v1';
+const WEDGE_CLUBS=[{loft:58,label:'58°'},{loft:54,label:'54°'},{loft:50,label:'50°'},{loft:46,label:'46° PW'}];
+const CALIB_SESSION_LENGTHS={A:['7:30','9:00'],B:['10:30','Full']};
+function loadCalib(){
+  const raw=safeGet(CALIB_KEY,null);
+  if(!raw)return {sessions:[]};
+  try{return JSON.parse(raw)}catch(e){return {sessions:[]}}
+}
+function saveCalibData(){safeSet(CALIB_KEY,JSON.stringify(calibData))}
+let calibData=loadCalib();
+let activeCalib=null;
+function nextCalibType(){
+  if(!calibData.sessions.length)return 'A';
+  return calibData.sessions[calibData.sessions.length-1].type==='A'?'B':'A';
+}
+function daysSinceLastCalib(){
+  if(!calibData.sessions.length)return Infinity;
+  const last=calibData.sessions[calibData.sessions.length-1];
+  return (Date.now()-new Date(last.date).getTime())/86400000;
+}
+function calibDue(){return daysSinceLastCalib()>=14}
+function refreshCalibUI(){
+  const due=calibDue();
+  const type=nextCalibType();
+  if(calibData.sessions.length){
+    const last=calibData.sessions[calibData.sessions.length-1];
+    el('calibStatus').textContent=`Last calibration: ${new Date(last.date).toLocaleDateString()} (Session ${last.type} — ${CALIB_SESSION_LENGTHS[last.type].join(' & ')})`;
+  }else{
+    el('calibStatus').textContent='Not started yet.';
+  }
+  el('calibDueBadge').textContent=due?'Due now':'Not due yet';
+  el('calibDueBadge').className='badge '+(due?'status-warn':'status-good');
+  el('startCalibBtn').textContent=`Start Calibration — Session ${type} (${CALIB_SESSION_LENGTHS[type].join(' & ')})`;
+}
+function buildCalibGroups(type){
+  const lengths=CALIB_SESSION_LENGTHS[type];
+  const groups=[];
+  WEDGE_CLUBS.forEach(c=>{
+    lengths.forEach(len=>{
+      groups.push({club:c.loft,clubLabel:c.label,length:len,count:3});
+    });
+  });
+  return groups;
+}
+function startCalibration(){
+  const type=nextCalibType();
+  activeCalib={type,groups:buildCalibGroups(type),groupIndex:0,shotInGroup:0,shots:[]};
+  el('startScreen').classList.add('hidden');
+  el('calibView').classList.remove('hidden');
+  el('calibResultCard').classList.add('hidden');
+  el('calibScreen').classList.remove('hidden');
+  showCalibShot();
+}
+el('startCalibBtn').onclick=startCalibration;
+function currentCalibGroup(){return activeCalib.groups[activeCalib.groupIndex]}
+function renderCalibGcquadFields(){
+  const req=['ballSpeed','attack','dynLoft','spin'];
+  el('calibDetails').innerHTML=req.map(id=>{
+    const m=GCQUAD_FIELDS[id];
+    const fid='calib_'+id;
+    const signBtn=m.signed?`<button type="button" class="ghost signToggle" data-target="${fid}" style="width:52px;flex:none">±</button>`:'';
+    return `<label>${m.label}
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input id="${fid}" type="number" step="${m.step}" style="flex:1;margin-top:0">
+        ${signBtn}
+      </div>
+      <div class="small">${m.hint}</div>
+    </label>`;
+  }).join('');
+}
+function showCalibShot(){
+  const g=currentCalibGroup();
+  el('calibClub').textContent=g.clubLabel;
+  el('calibLength').textContent=g.length+' swing';
+  el('calibProgress').textContent=`Group ${activeCalib.groupIndex+1} of ${activeCalib.groups.length}`;
+  el('calibShotCount').textContent=`Shot ${activeCalib.shotInGroup+1} of ${g.count}`;
+  el('calibCarry').value='';
+  renderCalibGcquadFields();
+  el('calibMessage').textContent='';
+}
+el('calibView').addEventListener('click',e=>{
+  const btn=e.target.closest('.signToggle');
+  if(!btn)return;
+  const input=document.getElementById(btn.dataset.target);
+  if(!input)return;
+  if(input.value===''){input.value='0';return}
+  input.value=(Number(input.value)*-1).toString();
+});
+function calibNum(id){
+  const input=document.getElementById(id);
+  if(!input)return null;
+  const v=input.value;
+  return v===''?null:Number(v);
+}
+el('saveCalibShot').onclick=()=>{
+  const carry=calibNum('calibCarry');
+  if(carry===null){el('calibMessage').textContent='Enter actual carry before saving.';return}
+  const req=['calib_ballSpeed','calib_attack','calib_dynLoft','calib_spin'];
+  const missing=req.filter(id=>calibNum(id)===null);
+  if(missing.length){el('calibMessage').textContent='Fill in all GCQuad fields before saving.';return}
+  const g=currentCalibGroup();
+  activeCalib.shots.push({
+    club:g.club,length:g.length,carry,
+    ballSpeed:calibNum('calib_ballSpeed'),attack:calibNum('calib_attack'),
+    dynLoft:calibNum('calib_dynLoft'),spin:calibNum('calib_spin')
+  });
+  advanceCalibShot();
+};
+function advanceCalibShot(){
+  const g=currentCalibGroup();
+  if(activeCalib.shotInGroup<g.count-1){activeCalib.shotInGroup++;showCalibShot()}
+  else if(activeCalib.groupIndex<activeCalib.groups.length-1){activeCalib.groupIndex++;activeCalib.shotInGroup=0;showCalibShot()}
+  else{finishCalibration()}
+}
+function finishCalibration(){
+  calibData.sessions.push({date:new Date().toISOString(),type:activeCalib.type,shots:activeCalib.shots});
+  saveCalibData();
+  el('calibScreen').classList.add('hidden');
+  el('calibResultCard').classList.remove('hidden');
+  renderCalibResult();
+  activeCalib=null;
+}
+function renderCalibResult(){
+  const session=calibData.sessions[calibData.sessions.length-1];
+  const byGroup={};
+  session.shots.forEach(x=>{
+    const key=x.club+'|'+x.length;
+    (byGroup[key]=byGroup[key]||[]).push(x.carry);
+  });
+  const labelByLoft={};
+  WEDGE_CLUBS.forEach(c=>labelByLoft[c.loft]=c.label);
+  el('calibResultGrid').innerHTML=Object.keys(byGroup).map(k=>{
+    const [loft,len]=k.split('|');
+    const avg=mean(byGroup[k]);
+    return `<div class="analysis-item"><div class="k">${labelByLoft[loft]} · ${len}</div><div class="v">${avg.toFixed(1)} yd</div></div>`;
+  }).join('');
+  el('calibResultNote').textContent=`Session ${session.type} complete. Check the Wedge Yardage Chart in Progress for the full picture once both session types have run.`;
+}
+el('calibDone').onclick=()=>{
+  el('calibResultCard').classList.add('hidden');
+  el('calibView').classList.add('hidden');
+  el('startScreen').classList.remove('hidden');
+  refreshCalibUI();
+};
+function computeWedgeChart(){
+  const allShots=calibData.sessions.flatMap(s=>s.shots);
+  const rows=[];
+  WEDGE_CLUBS.forEach(c=>{
+    ['7:30','9:00','10:30','Full'].forEach(len=>{
+      const shots=allShots.filter(x=>x.club===c.loft&&x.length===len);
+      rows.push({
+        club:c.label,length:len,
+        count:shots.length,
+        avg:shots.length?mean(shots.map(x=>x.carry)):null,
+        confident:shots.length>=3
+      });
+    });
+  });
+  return rows;
+}
+function decelerationCheck(){
+  const allShots=calibData.sessions.flatMap(s=>s.shots);
+  const flags=[];
+  WEDGE_CLUBS.forEach(c=>{
+    const shortShots=allShots.filter(x=>x.club===c.loft&&(x.length==='7:30'||x.length==='9:00'));
+    const longShots=allShots.filter(x=>x.club===c.loft&&(x.length==='10:30'||x.length==='Full'));
+    if(shortShots.length>=3&&longShots.length>=3){
+      const shortAttack=mean(shortShots.map(x=>x.attack));
+      const longAttack=mean(longShots.map(x=>x.attack));
+      const gap=shortAttack-longAttack;
+      if(gap>2){
+        flags.push({level:'warn',title:c.label+' — possible steering',text:`Attack angle is ${gap.toFixed(1)}° shallower on the shorter swings (7:30/9:00) than the longer ones (${longAttack.toFixed(1)}° vs ${shortAttack.toFixed(1)}°). That's the data signature of guiding the club to a position instead of accelerating through it — worth a look.`});
+      }
+    }
+  });
+  return flags;
+}
+function renderWedgeChart(){
+  const rows=computeWedgeChart();
+  el('wedgeChartGrid').innerHTML=rows.map(r=>`
+    <div class="analysis-item">
+      <div class="k">${r.club} · ${r.length}</div>
+      <div class="v">${r.avg===null?'—':r.avg.toFixed(1)+' yd'}</div>
+      <div class="small">${r.count} shot${r.count===1?'':'s'}${r.count&&!r.confident?' · building':''}</div>
+    </div>`).join('');
+  const flags=decelerationCheck();
+  el('wedgeChartFlags').innerHTML=flags.length
+    ?flags.map(f=>`<div class="insight-item insight-${f.level}"><strong>${f.title}</strong>${f.text}</div>`).join('')
+    :(calibData.sessions.length?'<div class="insight-item insight-good"><strong>No steering pattern detected</strong>Attack angle looks consistent across swing lengths so far.</div>':'');
+}
+refreshCalibUI();
 
 el('resumePractice').onclick=()=>restoreActive(loadActive());
 el('discardPractice').onclick=()=>{
