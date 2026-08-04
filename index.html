@@ -367,6 +367,8 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <div class="button-row">
       <button id="exportJson" class="primary">Export Backup</button>
       <button id="exportCsv" class="secondary">Export CSV</button>
+      <button id="exportCalibCsv" class="secondary">Export Calibration CSV</button>
+      <button id="shareCalibReport" class="secondary">Share Calibration Report</button>
     </div>
     <label style="margin-top:14px">Import backup
       <input id="importFile" type="file" accept=".json,application/json">
@@ -1266,12 +1268,61 @@ el('shareReportToday').onclick=()=>{
   if(state.current)shareSessionReport(state.current);
 };
 
+function buildCalibReportText(){
+  const lines=[];
+  lines.push('AYDEN WEDGE CALIBRATION — FULL REPORT');
+  lines.push('='.repeat(40));
+  lines.push('Sessions completed: '+calibData.sessions.length);
+  lines.push('');
+  lines.push('YARDAGE CHART (all data collected so far)');
+  lines.push('-'.repeat(40));
+  computeWedgeChart().forEach(r=>{
+    lines.push(r.club+' · '+r.distance+'y target: '+(r.avg===null?'no data':r.avg.toFixed(1)+' yd avg, '+r.count+' shots'+(r.confident?'':' (building)')));
+  });
+  lines.push('');
+  lines.push('PROGRESSION CHECK');
+  lines.push('-'.repeat(40));
+  const flags=gripTempoConsistencyCheck();
+  if(flags.length){
+    flags.forEach(f=>lines.push('['+f.level.toUpperCase()+'] '+f.title+': '+stripTags(f.text)));
+  }else{
+    lines.push('No issues detected in ball speed progression.');
+  }
+  lines.push('');
+  lines.push('SESSION-BY-SESSION RAW DATA');
+  lines.push('-'.repeat(40));
+  lines.push('date | session | club | zoneType | targetDistance | carry | ballSpeed | attack | dynLoft | spin');
+  calibData.sessions.forEach(s=>{
+    s.shots.forEach(x=>{
+      lines.push([s.date,CALIB_SESSIONS[s.type]?CALIB_SESSIONS[s.type].label:s.type,CALIB_CLUB_LABELS[x.club]||x.club,x.zoneType,x.distance,x.carry,x.ballSpeed,x.attack,x.dynLoft,x.spin].map(v=>v===null||v===undefined?'—':v).join(' | '));
+    });
+  });
+  lines.push('');
+  lines.push('— End of report —');
+  return lines.join('\n');
+}
+async function shareTextFile(filename,title,text){
+  try{
+    const file=new File([text],filename,{type:'text/plain'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:title,text:title});
+      return;
+    }
+  }catch(e){
+    if(e&&e.name==='AbortError')return;
+  }
+  download(filename,'text/plain',text);
+}
+el('shareCalibReport').onclick=()=>{
+  shareTextFile('Ayden-Wedge-Calibration-Report.txt','Ayden Wedge Calibration Report',buildCalibReportText());
+};
+
 function download(name,type,text){
   const blob=new Blob([text],{type});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)
 }
-el('exportJson').onclick=()=>download('ayden-precision-beta-backup.json','application/json',JSON.stringify({version:2,sessions:state.sessions,active:loadActive()},null,2));
+el('exportJson').onclick=()=>download('ayden-precision-beta-backup.json','application/json',JSON.stringify({version:3,sessions:state.sessions,active:loadActive(),calibration:calibData},null,2));
 el('exportCsv').onclick=()=>{
   const headers=['sessionDate','tier','location','drill','target','carry','absoluteCarryError','side','proximity','strike','ballSpeed','launch','spin','azimuth','path','face','attack','dynLoft','descent'];
   const rows=[headers.join(',')];
@@ -1280,6 +1331,15 @@ el('exportCsv').onclick=()=>{
     rows.push(vals.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(','))
   })));
   download('ayden-precision-beta-shots.csv','text/csv',rows.join('\n'))
+};
+el('exportCalibCsv').onclick=()=>{
+  const headers=['sessionDate','sessionType','club','zoneType','targetDistance','carry','ballSpeed','attack','dynLoft','spin'];
+  const rows=[headers.join(',')];
+  calibData.sessions.forEach(s=>s.shots.forEach(x=>{
+    const vals=[s.date,CALIB_SESSIONS[s.type]?CALIB_SESSIONS[s.type].label:s.type,CALIB_CLUB_LABELS[x.club]||x.club,x.zoneType,x.distance,x.carry,x.ballSpeed,x.attack,x.dynLoft,x.spin];
+    rows.push(vals.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(','))
+  }));
+  download('ayden-wedge-calibration-shots.csv','text/csv',rows.join('\n'))
 };
 el('importFile').onchange=e=>{
   const file=e.target.files[0];if(!file)return;
@@ -1290,6 +1350,7 @@ el('importFile').onchange=e=>{
       if(!Array.isArray(p.sessions))throw new Error();
       state.sessions=p.sessions;saveSessions();
       if(p.active)safeSet(ACTIVE_KEY,JSON.stringify(p.active));
+      if(p.calibration&&Array.isArray(p.calibration.sessions)){calibData=p.calibration;saveCalibData();refreshCalibUI()}
       el('dataMessage').textContent='Backup imported successfully.';renderStorage()
     }catch{el('dataMessage').textContent='That backup file could not be imported.'}
   };
