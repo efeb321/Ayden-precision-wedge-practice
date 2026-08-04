@@ -131,12 +131,12 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div>
         <div class="small">Wedge Calibration</div>
-        <h2 style="margin:4px 0 0">Yardage chart by club &amp; swing length</h2>
+        <h2 style="margin:4px 0 0">Yardage chart — grip &amp; tempo</h2>
       </div>
       <span id="calibDueBadge" class="badge">—</span>
     </div>
     <p id="calibStatus" class="small" style="margin-top:6px">Not started yet</p>
-    <p class="small">Every calibration session covers all 4 wedges (58°, 54°, 50°, 46° PW) at two swing lengths. Sessions alternate 7:30/9:00 and 10:30/Full, so the full chart refreshes about every 4 weeks. Separate from the daily 5 drills.</p>
+    <p class="small">Builds Ayden's real yardage chart from his own system — grip position for the pitch zones, tempo for the approach zones. Two sessions cover all 4 wedges; the full chart refreshes about every 4 weeks. Separate from the daily 5 drills.</p>
     <button id="startCalibBtn" class="ghost" style="margin-top:10px">Start Calibration</button>
   </div>
 
@@ -274,10 +274,20 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
     <div id="calibScreen" class="card hidden">
       <span class="badge">Wedge Calibration</span>
       <h2 id="calibClub" style="margin-top:10px"></h2>
-      <p id="calibLength" class="small"></p>
+      <p id="calibZoneLabel" class="small" style="font-weight:700"></p>
+      <p id="calibDistance" class="small"></p>
       <p id="calibProgress" class="small"></p>
-      <p class="instruction" style="margin-top:10px">Same tempo back and through — accelerate into the ball, don't guide it to a stop.</p>
-      <p id="calibShotCount" class="small"></p>
+      <p id="calibCue" class="instruction" style="margin-top:10px"></p>
+
+      <div id="calibMetronomeBox" class="coach-banner" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div>
+          <div id="calibTempoLabel" style="font-weight:700">Tempo cue: 3:1</div>
+          <div class="small" id="calibTempoHint">Backswing : downswing ratio</div>
+        </div>
+        <button id="toggleMetronome" class="ghost" type="button" style="width:auto;padding:10px 16px;margin:0;flex:none">Start Cue</button>
+      </div>
+
+      <p id="calibShotCount" class="small" style="margin-top:10px"></p>
 
       <label style="margin-top:10px">Actual carry
         <input id="calibCarry" inputmode="decimal" type="number" step="0.1" placeholder="yards">
@@ -293,6 +303,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
       <span class="badge status-good">Calibration session complete</span>
       <h2 style="margin-top:10px">This session's results</h2>
       <div id="calibResultGrid" class="analysis-grid"></div>
+      <div id="calibResultFlags"></div>
       <p id="calibResultNote" class="small" style="margin-top:10px"></p>
       <button id="calibDone" class="primary">Done</button>
     </div>
@@ -323,7 +334,7 @@ dialog::backdrop{background:rgba(15,23,42,.55)}
 
   <div class="card">
     <h2>Wedge Yardage Chart</h2>
-    <p class="small">Built from Wedge Calibration sessions — club × swing length → average carry. Runs every ~2 weeks, alternating short and long swing lengths.</p>
+    <p class="small">Built from Wedge Calibration sessions — Ayden's real yardage per club and distance, from his own grip and tempo system.</p>
     <div id="wedgeChartFlags"></div>
     <div id="wedgeChartGrid" class="analysis-grid" style="margin-top:8px"></div>
   </div>
@@ -1410,8 +1421,34 @@ el('closeGcquad').onclick=()=>el('gcquadDialog').close();
 
 // ---------- Wedge Calibration ----------
 const CALIB_KEY='ayden_wedge_calib_v1';
-const WEDGE_CLUBS=[{loft:58,label:'58°'},{loft:54,label:'54°'},{loft:50,label:'50°'},{loft:46,label:'46° PW'}];
-const CALIB_SESSION_LENGTHS={A:['7:30','9:00'],B:['10:30','Full']};
+const ZONE_TYPE_LABELS={grip:'Grip Control',tempo:'Tempo Control',hybrid:'Grip & Tempo Together'};
+const CALIB_CLUB_LABELS={58:'LW (58°)',54:'SW (54°)',50:'GW (50°)',46:'PW (46°)'};
+const CALIB_ZONES=[
+  {club:58,clubLabel:'LW (58°)',type:'grip',tempoRatio:3,distances:[30,35,40,45,50,55,60]},
+  {club:54,clubLabel:'SW (54°) — Pitch Zone',type:'grip',tempoRatio:3,distances:[60,65,70,75,80,85]},
+  {club:54,clubLabel:'SW (54°) — Approach Zone',type:'tempo',tempoRatio:2.4,distances:[90,95]},
+  {club:50,clubLabel:'GW (50°) — Approach Zone',type:'tempo',tempoRatio:2.4,distances:[100,105,110,115]},
+  {club:46,clubLabel:'PW (46°) — Choke-Down Approach',type:'hybrid',tempoRatio:2.4,distances:[115,120,125]}
+];
+const CALIB_SESSIONS={
+  A:{label:'Grip Control Session',zoneIndexes:[0,1]},
+  B:{label:'Tempo Control Session',zoneIndexes:[2,3,4]}
+};
+function calibCueText(zone,idxInZone){
+  if(zone.type==='grip'){
+    return idxInZone===0
+      ?'Full choke-down — hands all the way at the bottom of the grip. Shoulder-to-shoulder length, steady tempo.'
+      :'Move slightly further up the grip than last distance. Same shoulder-to-shoulder length, same tempo.';
+  }
+  if(zone.type==='tempo'){
+    return idxInZone===0
+      ?'Grip all the way up. Use your quicker approach tempo.'
+      :'Same grip, a touch quicker tempo than the last distance.';
+  }
+  return idxInZone===0
+    ?'Choke down and use your quicker approach tempo.'
+    :'Move slightly further up the grip, same quicker tempo.';
+}
 function loadCalib(){
   const raw=safeGet(CALIB_KEY,null);
   if(!raw)return {sessions:[]};
@@ -1435,20 +1472,23 @@ function refreshCalibUI(){
   const type=nextCalibType();
   if(calibData.sessions.length){
     const last=calibData.sessions[calibData.sessions.length-1];
-    el('calibStatus').textContent=`Last calibration: ${new Date(last.date).toLocaleDateString()} (Session ${last.type} — ${CALIB_SESSION_LENGTHS[last.type].join(' & ')})`;
+    el('calibStatus').textContent=`Last calibration: ${new Date(last.date).toLocaleDateString()} (${CALIB_SESSIONS[last.type].label})`;
   }else{
     el('calibStatus').textContent='Not started yet.';
   }
   el('calibDueBadge').textContent=due?'Due now':'Not due yet';
   el('calibDueBadge').className='badge '+(due?'status-warn':'status-good');
-  el('startCalibBtn').textContent=`Start Calibration — Session ${type} (${CALIB_SESSION_LENGTHS[type].join(' & ')})`;
+  el('startCalibBtn').textContent=`Start Calibration — ${CALIB_SESSIONS[type].label}`;
 }
-function buildCalibGroups(type){
-  const lengths=CALIB_SESSION_LENGTHS[type];
+function buildCalibGroups(sessionType){
   const groups=[];
-  WEDGE_CLUBS.forEach(c=>{
-    lengths.forEach(len=>{
-      groups.push({club:c.loft,clubLabel:c.label,length:len,count:3});
+  CALIB_SESSIONS[sessionType].zoneIndexes.forEach(zi=>{
+    const zone=CALIB_ZONES[zi];
+    zone.distances.forEach((d,idx)=>{
+      groups.push({
+        club:zone.club,clubLabel:zone.clubLabel,zoneType:zone.type,tempoRatio:zone.tempoRatio,
+        distance:d,cue:calibCueText(zone,idx),count:3
+      });
     });
   });
   return groups;
@@ -1479,11 +1519,67 @@ function renderCalibGcquadFields(){
     </label>`;
   }).join('');
 }
+
+// --- Tempo metronome (Web Audio API, no external files) ---
+let audioCtx=null;
+let metronomeTimer=null;
+let metronomeRunning=false;
+function playBeep(freq,dur){
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.frequency.value=freq;
+    osc.type='sine';
+    gain.gain.setValueAtTime(0.001,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.35,audioCtx.currentTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime+dur);
+  }catch(e){console.error('metronome beep failed',e)}
+}
+function startMetronome(ratio){
+  stopMetronome();
+  const cycleMs=1400;
+  const backswingMs=cycleMs*(ratio/(ratio+1));
+  const downswingMs=cycleMs-backswingMs;
+  metronomeRunning=true;
+  const loop=()=>{
+    if(!metronomeRunning)return;
+    playBeep(440,0.12);
+    metronomeTimer=setTimeout(()=>{
+      if(!metronomeRunning)return;
+      playBeep(880,0.12);
+      metronomeTimer=setTimeout(loop,downswingMs);
+    },backswingMs);
+  };
+  loop();
+}
+function stopMetronome(){
+  metronomeRunning=false;
+  if(metronomeTimer){clearTimeout(metronomeTimer);metronomeTimer=null}
+  el('toggleMetronome').textContent='Start Cue';
+}
+el('toggleMetronome').onclick=()=>{
+  if(metronomeRunning){
+    stopMetronome();
+  }else{
+    startMetronome(currentCalibGroup().tempoRatio);
+    el('toggleMetronome').textContent='Stop Cue';
+  }
+};
+
 function showCalibShot(){
+  stopMetronome();
   const g=currentCalibGroup();
   el('calibClub').textContent=g.clubLabel;
-  el('calibLength').textContent=g.length+' swing';
+  el('calibZoneLabel').textContent=ZONE_TYPE_LABELS[g.zoneType];
+  el('calibDistance').textContent='Target: '+g.distance+' yards';
   el('calibProgress').textContent=`Group ${activeCalib.groupIndex+1} of ${activeCalib.groups.length}`;
+  el('calibCue').textContent=g.cue;
+  el('calibTempoLabel').textContent='Tempo cue: '+g.tempoRatio+':1';
   el('calibShotCount').textContent=`Shot ${activeCalib.shotInGroup+1} of ${g.count}`;
   el('calibCarry').value='';
   renderCalibGcquadFields();
@@ -1510,8 +1606,9 @@ el('saveCalibShot').onclick=()=>{
   const missing=req.filter(id=>calibNum(id)===null);
   if(missing.length){el('calibMessage').textContent='Fill in all GCQuad fields before saving.';return}
   const g=currentCalibGroup();
+  stopMetronome();
   activeCalib.shots.push({
-    club:g.club,length:g.length,carry,
+    club:g.club,zoneType:g.zoneType,distance:g.distance,carry,
     ballSpeed:calibNum('calib_ballSpeed'),attack:calibNum('calib_attack'),
     dynLoft:calibNum('calib_dynLoft'),spin:calibNum('calib_spin')
   });
@@ -1524,6 +1621,7 @@ function advanceCalibShot(){
   else{finishCalibration()}
 }
 function finishCalibration(){
+  stopMetronome();
   calibData.sessions.push({date:new Date().toISOString(),type:activeCalib.type,shots:activeCalib.shots});
   saveCalibData();
   el('calibScreen').classList.add('hidden');
@@ -1531,23 +1629,49 @@ function finishCalibration(){
   renderCalibResult();
   activeCalib=null;
 }
+function gripTempoConsistencyCheck(shots,zoneIndexesFilter){
+  const flags=[];
+  const zones=zoneIndexesFilter?CALIB_ZONES.filter((z,i)=>zoneIndexesFilter.includes(i)):CALIB_ZONES;
+  const allShots=shots||calibData.sessions.flatMap(s=>s.shots);
+  zones.forEach(zone=>{
+    const perDistance=zone.distances.map(d=>{
+      const ds=allShots.filter(x=>x.club===zone.club&&x.distance===d);
+      return {distance:d,ballSpeed:ds.length?mean(ds.map(x=>x.ballSpeed)):null};
+    }).filter(p=>p.ballSpeed!==null);
+    if(perDistance.length<2)return;
+    const first=perDistance[0],last=perDistance[perDistance.length-1];
+    const gap=last.ballSpeed-first.ballSpeed;
+    if(gap<1.5){
+      flags.push({level:'warn',title:zone.clubLabel+' — check the progression',text:`Ball speed only moved from ${first.ballSpeed.toFixed(1)} to ${last.ballSpeed.toFixed(1)} mph between ${first.distance} and ${last.distance} yards. It should climb clearly as ${zone.type==='grip'?'the grip moves up':'tempo quickens'} — worth checking Ayden is actually changing it enough between distances.`});
+    }
+  });
+  return flags;
+}
 function renderCalibResult(){
   const session=calibData.sessions[calibData.sessions.length-1];
   const byGroup={};
   session.shots.forEach(x=>{
-    const key=x.club+'|'+x.length;
+    const key=x.club+'|'+x.distance;
     (byGroup[key]=byGroup[key]||[]).push(x.carry);
   });
-  const labelByLoft={};
-  WEDGE_CLUBS.forEach(c=>labelByLoft[c.loft]=c.label);
-  el('calibResultGrid').innerHTML=Object.keys(byGroup).map(k=>{
-    const [loft,len]=k.split('|');
+  const sortedKeys=Object.keys(byGroup).sort((a,b)=>{
+    const [clubA,distA]=a.split('|').map(Number);
+    const [clubB,distB]=b.split('|').map(Number);
+    return distA-distB||clubA-clubB;
+  });
+  el('calibResultGrid').innerHTML=sortedKeys.map(k=>{
+    const [loft,dist]=k.split('|');
     const avg=mean(byGroup[k]);
-    return `<div class="analysis-item"><div class="k">${labelByLoft[loft]} · ${len}</div><div class="v">${avg.toFixed(1)} yd</div></div>`;
+    return `<div class="analysis-item"><div class="k">${CALIB_CLUB_LABELS[loft]} · ${dist}y</div><div class="v">${avg.toFixed(1)} yd</div></div>`;
   }).join('');
-  el('calibResultNote').textContent=`Session ${session.type} complete. Check the Wedge Yardage Chart in Progress for the full picture once both session types have run.`;
+  const flags=gripTempoConsistencyCheck(session.shots,CALIB_SESSIONS[session.type].zoneIndexes);
+  el('calibResultFlags').innerHTML=flags.length
+    ?flags.map(f=>`<div class="insight-item insight-${f.level}"><strong>${f.title}</strong>${f.text}</div>`).join('')
+    :'';
+  el('calibResultNote').textContent=`${CALIB_SESSIONS[session.type].label} complete. Check the Wedge Yardage Chart in Progress for the full picture once both sessions have run.`;
 }
 el('calibDone').onclick=()=>{
+  stopMetronome();
   el('calibResultCard').classList.add('hidden');
   el('calibView').classList.add('hidden');
   el('startScreen').classList.remove('hidden');
@@ -1556,48 +1680,32 @@ el('calibDone').onclick=()=>{
 function computeWedgeChart(){
   const allShots=calibData.sessions.flatMap(s=>s.shots);
   const rows=[];
-  WEDGE_CLUBS.forEach(c=>{
-    ['7:30','9:00','10:30','Full'].forEach(len=>{
-      const shots=allShots.filter(x=>x.club===c.loft&&x.length===len);
+  CALIB_ZONES.forEach(zone=>{
+    zone.distances.forEach(d=>{
+      const shots=allShots.filter(x=>x.club===zone.club&&x.distance===d);
       rows.push({
-        club:c.label,length:len,
+        club:CALIB_CLUB_LABELS[zone.club],distance:d,
         count:shots.length,
         avg:shots.length?mean(shots.map(x=>x.carry)):null,
         confident:shots.length>=3
       });
     });
   });
+  rows.sort((a,b)=>a.distance-b.distance);
   return rows;
-}
-function decelerationCheck(){
-  const allShots=calibData.sessions.flatMap(s=>s.shots);
-  const flags=[];
-  WEDGE_CLUBS.forEach(c=>{
-    const shortShots=allShots.filter(x=>x.club===c.loft&&(x.length==='7:30'||x.length==='9:00'));
-    const longShots=allShots.filter(x=>x.club===c.loft&&(x.length==='10:30'||x.length==='Full'));
-    if(shortShots.length>=3&&longShots.length>=3){
-      const shortAttack=mean(shortShots.map(x=>x.attack));
-      const longAttack=mean(longShots.map(x=>x.attack));
-      const gap=shortAttack-longAttack;
-      if(gap>2){
-        flags.push({level:'warn',title:c.label+' — possible steering',text:`Attack angle is ${gap.toFixed(1)}° shallower on the shorter swings (7:30/9:00) than the longer ones (${longAttack.toFixed(1)}° vs ${shortAttack.toFixed(1)}°). That's the data signature of guiding the club to a position instead of accelerating through it — worth a look.`});
-      }
-    }
-  });
-  return flags;
 }
 function renderWedgeChart(){
   const rows=computeWedgeChart();
   el('wedgeChartGrid').innerHTML=rows.map(r=>`
     <div class="analysis-item">
-      <div class="k">${r.club} · ${r.length}</div>
+      <div class="k">${r.club} · ${r.distance}y</div>
       <div class="v">${r.avg===null?'—':r.avg.toFixed(1)+' yd'}</div>
       <div class="small">${r.count} shot${r.count===1?'':'s'}${r.count&&!r.confident?' · building':''}</div>
     </div>`).join('');
-  const flags=decelerationCheck();
+  const flags=gripTempoConsistencyCheck();
   el('wedgeChartFlags').innerHTML=flags.length
     ?flags.map(f=>`<div class="insight-item insight-${f.level}"><strong>${f.title}</strong>${f.text}</div>`).join('')
-    :(calibData.sessions.length?'<div class="insight-item insight-good"><strong>No steering pattern detected</strong>Attack angle looks consistent across swing lengths so far.</div>':'');
+    :(calibData.sessions.length?'<div class="insight-item insight-good"><strong>Progression looks consistent</strong>Ball speed is climbing as expected through each zone so far.</div>':'');
 }
 refreshCalibUI();
 
